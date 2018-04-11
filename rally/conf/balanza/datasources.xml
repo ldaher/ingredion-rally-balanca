@@ -1,0 +1,173 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE beans PUBLIC "-//SPRING//DTD BEAN//EN" "http://www.springframework.org/dtd/spring-beans.dtd">
+<beans>
+    <bean id="propertyConfigurer" class="org.springframework.beans.factory.config.PropertyPlaceholderConfigurer">
+        <property name="location" value="file:../rally.properties"/>
+    </bean>
+    <bean id="dataSourceControl" class="com.mchange.v2.c3p0.ComboPooledDataSource" destroy-method="close">
+		<property name="driverClass" value="oracle.jdbc.driver.OracleDriver"/>
+		<property name="jdbcUrl" value="${db.control.url}"/>
+		<property name="properties">
+			<props>
+				<prop key="v$session.program">RALLY_BALANZA</prop>
+			</props>
+		</property>
+		<property name="user" value="${db.control.user}"/>
+		<property name="password" value="${db.control.password}"/>
+		<property name="acquireRetryAttempts" value="0"/>
+		<property name="acquireIncrement" value="1"/>
+        <!-- 30 segundos -->
+		<property name="acquireRetryDelay" value="30000"/>
+		<property name="breakAfterAcquireFailure" value="false"/>
+		<property name="minPoolSize" value="${db.control.pool.size.min}"/>
+		<property name="initialPoolSize" value="${db.control.pool.size.initial}"/>
+		<property name="maxPoolSize" value="${db.control.pool.size.max}"/>
+		<property name="maxIdleTime" value="${db.control.pool.idletime.max}"/>
+		<property name="maxConnectionAge" value="${db.control.pool.connectionage.max}"/>
+		<property name="maxIdleTimeExcessConnections" value="1"/>
+		<property name="idleConnectionTestPeriod" value="0"/>
+		<property name="testConnectionOnCheckin" value="false"/>
+		<property name="numHelperThreads" value="${db.control.pool.helperthreads}"/>
+		<property name="dataSourceName" value="dataSourceControl"/>
+	</bean>
+	<bean id="dataSourceLog" class="com.mchange.v2.c3p0.ComboPooledDataSource" destroy-method="close">
+		<property name="driverClass" value="org.gjt.mm.mysql.Driver"/>
+		<property name="jdbcUrl" value="${db.log.url}"/>
+		<property name="user" value="${db.log.user}"/>
+		<property name="password" value="${db.log.password}"/>
+		<property name="acquireRetryAttempts" value="0"/>
+		<property name="acquireIncrement" value="3"/>
+		<property name="acquireRetryDelay" value="30000"/>
+		<property name="breakAfterAcquireFailure" value="true"/>
+		<property name="minPoolSize" value="${db.pool.size.min}"/>
+		<property name="initialPoolSize" value="${db.pool.size.initial}"/>
+		<property name="maxPoolSize" value="${db.pool.size.max}"/>
+		<property name="maxIdleTime" value="${db.pool.idletime.max}"/>
+		<property name="maxConnectionAge" value="${db.pool.connectionage.max}"/>
+		<property name="maxIdleTimeExcessConnections" value="0"/>
+		<property name="idleConnectionTestPeriod" value="600"/>
+		<property name="testConnectionOnCheckin" value="true"/>
+		<property name="numHelperThreads" value="${db.pool.helperthreads}"/>
+        <property name="dataSourceName" value="dataSourceLog"/>
+    </bean>
+	<bean id="dataSourceWeightScaleMog" class="com.mchange.v2.c3p0.ComboPooledDataSource" destroy-method="close">
+		<property name="driverClass" value="org.gjt.mm.mysql.Driver"/>
+		<property name="jdbcUrl" value="${db.mogi.url}"/>
+		<property name="user" value="${db.mogi.user}"/>
+		<property name="password" value="${db.mogi.password}"/>
+		<property name="acquireRetryAttempts" value="0"/>
+		<property name="acquireIncrement" value="3"/>
+		<property name="acquireRetryDelay" value="30000"/>
+		<property name="breakAfterAcquireFailure" value="true"/>
+		<property name="minPoolSize" value="${db.pool.size.min}"/>
+		<property name="initialPoolSize" value="${db.pool.size.initial}"/>
+		<property name="maxPoolSize" value="${db.pool.size.max}"/>
+		<property name="maxIdleTime" value="${db.pool.idletime.max}"/>
+		<property name="maxConnectionAge" value="${db.pool.connectionage.max}"/>
+		<property name="maxIdleTimeExcessConnections" value="0"/>
+		<property name="idleConnectionTestPeriod" value="600"/>
+		<property name="testConnectionOnCheckin" value="true"/>
+		<property name="numHelperThreads" value="${db.pool.helperthreads}"/>
+        <property name="dataSourceName" value="dataSourceWeightScaleMog"/>
+    </bean>
+		<bean id="dataSourceWeightScaleCab" class="com.mchange.v2.c3p0.ComboPooledDataSource" destroy-method="close">
+		<property name="driverClass" value="org.gjt.mm.mysql.Driver"/>
+		<property name="jdbcUrl" value="${db.cabo.url}"/>
+		<property name="user" value="${db.cabo.user}"/>
+		<property name="password" value="${db.cabo.password}"/>
+		<property name="acquireRetryAttempts" value="0"/>
+		<property name="acquireIncrement" value="3"/>
+		<property name="acquireRetryDelay" value="30000"/>
+		<property name="breakAfterAcquireFailure" value="true"/>
+		<property name="minPoolSize" value="${db.pool.size.min}"/>
+		<property name="initialPoolSize" value="${db.pool.size.initial}"/>
+		<property name="maxPoolSize" value="${db.pool.size.max}"/>
+		<property name="maxIdleTime" value="${db.pool.idletime.max}"/>
+		<property name="maxConnectionAge" value="${db.pool.connectionage.max}"/>
+		<property name="maxIdleTimeExcessConnections" value="0"/>
+		<property name="idleConnectionTestPeriod" value="600"/>
+		<property name="testConnectionOnCheckin" value="true"/>
+		<property name="numHelperThreads" value="${db.pool.helperthreads}"/>
+        <property name="dataSourceName" value="dataSourceWeightScaleCab"/>
+    </bean>
+	<bean id="dataSourceWeightScaleBal" class="com.mchange.v2.c3p0.ComboPooledDataSource" destroy-method="close">
+		<property name="driverClass" value="org.gjt.mm.mysql.Driver"/>
+		<property name="jdbcUrl" value="${db.balsa.url}"/>
+		<property name="user" value="${db.balsa.user}"/>
+		<property name="password" value="${db.balsa.password}"/>
+		<property name="acquireRetryAttempts" value="0"/>
+		<property name="acquireIncrement" value="3"/>
+		<property name="acquireRetryDelay" value="30000"/>
+		<property name="breakAfterAcquireFailure" value="true"/>
+		<property name="minPoolSize" value="${db.pool.size.min}"/>
+		<property name="initialPoolSize" value="${db.pool.size.initial}"/>
+		<property name="maxPoolSize" value="${db.pool.size.max}"/>
+		<property name="maxIdleTime" value="${db.pool.idletime.max}"/>
+		<property name="maxConnectionAge" value="${db.pool.connectionage.max}"/>
+		<property name="maxIdleTimeExcessConnections" value="0"/>
+		<property name="idleConnectionTestPeriod" value="600"/>
+		<property name="testConnectionOnCheckin" value="true"/>
+		<property name="numHelperThreads" value="${db.pool.helperthreads}"/>
+        <property name="dataSourceName" value="dataSourceWeightScaleBal"/>
+    </bean>
+	<bean id="dataSourceWeightScaleTro" class="com.mchange.v2.c3p0.ComboPooledDataSource" destroy-method="close">
+		<property name="driverClass" value="org.gjt.mm.mysql.Driver"/>
+		<property name="jdbcUrl" value="${db.trombudo.url}"/>
+		<property name="user" value="${db.trombudo.user}"/>
+		<property name="password" value="${db.trombudo.password}"/>
+		<property name="acquireRetryAttempts" value="0"/>
+		<property name="acquireIncrement" value="3"/>
+		<property name="acquireRetryDelay" value="30000"/>
+		<property name="breakAfterAcquireFailure" value="true"/>
+		<property name="minPoolSize" value="${db.pool.size.min}"/>
+		<property name="initialPoolSize" value="${db.pool.size.initial}"/>
+		<property name="maxPoolSize" value="${db.pool.size.max}"/>
+		<property name="maxIdleTime" value="${db.pool.idletime.max}"/>
+		<property name="maxConnectionAge" value="${db.pool.connectionage.max}"/>
+		<property name="maxIdleTimeExcessConnections" value="0"/>
+		<property name="idleConnectionTestPeriod" value="600"/>
+		<property name="testConnectionOnCheckin" value="true"/>
+		<property name="numHelperThreads" value="${db.pool.helperthreads}"/>
+        <property name="dataSourceName" value="dataSourceWeightScaleTro"/>
+    </bean>
+	<bean id="dataSourceWeightScaleCon" class="com.mchange.v2.c3p0.ComboPooledDataSource" destroy-method="close">
+		<property name="driverClass" value="org.gjt.mm.mysql.Driver"/>
+		<property name="jdbcUrl" value="${db.conchal.url}"/>
+		<property name="user" value="${db.conchal.user}"/>
+		<property name="password" value="${db.conchal.password}"/>
+		<property name="acquireRetryAttempts" value="0"/>
+		<property name="acquireIncrement" value="3"/>
+		<property name="acquireRetryDelay" value="30000"/>
+		<property name="breakAfterAcquireFailure" value="true"/>
+		<property name="minPoolSize" value="${db.pool.size.min}"/>
+		<property name="initialPoolSize" value="${db.pool.size.initial}"/>
+		<property name="maxPoolSize" value="${db.pool.size.max}"/>
+		<property name="maxIdleTime" value="${db.pool.idletime.max}"/>
+		<property name="maxConnectionAge" value="${db.pool.connectionage.max}"/>
+		<property name="maxIdleTimeExcessConnections" value="0"/>
+		<property name="idleConnectionTestPeriod" value="600"/>
+		<property name="testConnectionOnCheckin" value="true"/>
+		<property name="numHelperThreads" value="${db.pool.helperthreads}"/>
+        <property name="dataSourceName" value="dataSourceWeightScaleCon"/>
+    </bean>
+	<bean id="dataSourceWeightScaleAlc" class="com.mchange.v2.c3p0.ComboPooledDataSource" destroy-method="close">
+		<property name="driverClass" value="org.gjt.mm.mysql.Driver"/>
+		<property name="jdbcUrl" value="${db.alcantara.url}"/>
+		<property name="user" value="${db.alcantara.user}"/>
+		<property name="password" value="${db.alcantara.password}"/>
+		<property name="acquireRetryAttempts" value="0"/>
+		<property name="acquireIncrement" value="3"/>
+		<property name="acquireRetryDelay" value="30000"/>
+		<property name="breakAfterAcquireFailure" value="true"/>
+		<property name="minPoolSize" value="${db.pool.size.min}"/>
+		<property name="initialPoolSize" value="${db.pool.size.initial}"/>
+		<property name="maxPoolSize" value="${db.pool.size.max}"/>
+		<property name="maxIdleTime" value="${db.pool.idletime.max}"/>
+		<property name="maxConnectionAge" value="${db.pool.connectionage.max}"/>
+		<property name="maxIdleTimeExcessConnections" value="0"/>
+		<property name="idleConnectionTestPeriod" value="600"/>
+		<property name="testConnectionOnCheckin" value="true"/>
+		<property name="numHelperThreads" value="${db.pool.helperthreads}"/>
+        <property name="dataSourceName" value="dataSourceWeightScaleAlc"/>
+    </bean>
+</beans>

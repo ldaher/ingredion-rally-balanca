@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE beans PUBLIC "-//SPRING//DTD BEAN//EN" "http://www.springframework.org/dtd/spring-beans.dtd">
+<beans>
+	<import resource="datasources.xml"/>
+    <bean id="propertyConfigurer" class="org.springframework.beans.factory.config.PropertyPlaceholderConfigurer">
+		<property name="location">
+			<value>file:../rally.properties</value>
+		</property>
+	</bean>
+    <bean id="logSessionFactory" class="org.springframework.orm.hibernate3.LocalSessionFactoryBean">
+        <property name="dataSource" ref="dataSourceLog"/>
+        <property name="mappingResources">
+        	<list>
+            	<value>com/pdm/interfaces/beans/MessageEnvelope.hbm.xml</value>
+			</list>
+        </property>
+        <property name="hibernateProperties">
+        	<props>
+            	<prop key="hibernate.dialect">org.hibernate.dialect.HSQLDialect</prop>
+               	<prop key="hibernate.show_sql">true</prop>
+            </props>
+        </property>
+	</bean>
+	<bean id="logHibernateTemplate" class="org.springframework.orm.hibernate3.HibernateTemplate">
+		<property name="sessionFactory" ref="logSessionFactory"/>
+	</bean>
+	<bean id="logJdbcTemplate" class="org.springframework.jdbc.core.JdbcTemplate">
+		<property name="dataSource" ref="dataSourceLog"/>
+	</bean>
+	<bean id="logTransactionManager" class="org.springframework.orm.hibernate3.HibernateTransactionManager">
+		<property name="sessionFactory" ref="logSessionFactory"/>
+	</bean>
+	<bean id="controlJdbcTemplate" class="org.springframework.jdbc.core.JdbcTemplate">
+    	<property name="dataSource" ref="dataSourceControl" />
+  	</bean>
+  	<bean id="weightScaleMogJdbcTemplate" class="org.springframework.jdbc.core.JdbcTemplate">
+  		<property name="dataSource" ref="dataSourceWeightScaleMog" />
+  	</bean>
+  	<bean id="weightScaleCabJdbcTemplate" class="org.springframework.jdbc.core.JdbcTemplate">
+  		<property name="dataSource" ref="dataSourceWeightScaleCab" />
+  	</bean>
+	<bean id="weightScaleBalJdbcTemplate" class="org.springframework.jdbc.core.JdbcTemplate">
+  		<property name="dataSource" ref="dataSourceWeightScaleBal" />
+  	</bean>
+	<bean id="weightScaleTroJdbcTemplate" class="org.springframework.jdbc.core.JdbcTemplate">
+  		<property name="dataSource" ref="dataSourceWeightScaleTro" />
+  	</bean>
+	<bean id="weightScaleConJdbcTemplate" class="org.springframework.jdbc.core.JdbcTemplate">
+  		<property name="dataSource" ref="dataSourceWeightScaleCon" />
+  	</bean>
+  <bean id="weightScaleAlcJdbcTemplate" class="org.springframework.jdbc.core.JdbcTemplate">
+      <property name="dataSource" ref="dataSourceWeightScaleAlc" />
+    </bean>
+	<bean id="abstractRallyService" class="com.pdm.interfaces.services.RallyServiceImpl">
+  		<property name="logHibernateTemplate" ref="logHibernateTemplate"/>
+  		<property name="logJdbcTemplate" ref="logJdbcTemplate"/>
+  		<property name="interfaceSequenceName"><value>SEQ_INTERFACE</value></property>
+  	</bean>
+	<bean id="weightScaleMogRallyService" class="com.pdm.interfaces.services.RallyServiceImpl" parent="abstractRallyService">
+  		<property name="controlJdbcTemplate" ref="controlJdbcTemplate"/>
+  		<property name="legacyJdbcTemplate" ref="weightScaleMogJdbcTemplate"/>
+  	</bean>
+	<bean id="weightScaleCabRallyService" class="com.pdm.interfaces.services.RallyServiceImpl" parent="abstractRallyService">
+  		<property name="controlJdbcTemplate" ref="controlJdbcTemplate"/>
+  		<property name="legacyJdbcTemplate" ref="weightScaleCabJdbcTemplate"/>
+  	</bean>
+		<bean id="weightScaleBalRallyService" class="com.pdm.interfaces.services.RallyServiceImpl" parent="abstractRallyService">
+  		<property name="controlJdbcTemplate" ref="controlJdbcTemplate"/>
+  		<property name="legacyJdbcTemplate" ref="weightScaleBalJdbcTemplate"/>
+  	</bean>
+		<bean id="weightScaleTroRallyService" class="com.pdm.interfaces.services.RallyServiceImpl" parent="abstractRallyService">
+  		<property name="controlJdbcTemplate" ref="controlJdbcTemplate"/>
+  		<property name="legacyJdbcTemplate" ref="weightScaleTroJdbcTemplate"/>
+  	</bean>
+    <bean id="weightScaleConRallyService" class="com.pdm.interfaces.services.RallyServiceImpl" parent="abstractRallyService">
+      <property name="controlJdbcTemplate" ref="controlJdbcTemplate"/>
+      <property name="legacyJdbcTemplate" ref="weightScaleConJdbcTemplate"/>
+    </bean>
+		<bean id="weightScaleAlcRallyService" class="com.pdm.interfaces.services.RallyServiceImpl" parent="abstractRallyService">
+  		<property name="controlJdbcTemplate" ref="controlJdbcTemplate"/>
+  		<property name="legacyJdbcTemplate" ref="weightScaleAlcJdbcTemplate"/>
+  	</bean>
+</beans>

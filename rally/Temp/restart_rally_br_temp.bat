@@ -1,0 +1,2 @@
+net stop RALLY_BALANZA
+net start RALLY_BALANZA

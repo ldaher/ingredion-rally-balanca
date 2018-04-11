@@ -1,0 +1,49 @@
+# Properties read from mule config files
+sftp.address.base=sftp://interpr3:Brasil2008!sap@10.117.74.61
+# cada 45 minutos
+frequency.polling.SDI0070.mog=30000
+frequency.polling.SDI0070.cab=29000
+frequency.polling.SDI0070.bal=28000
+frequency.polling.SDI0070.tro=27000
+frequency.polling.SDI0070.con=26000
+frequency.polling.SDI0070.alc=25000
+# Properties read from spring config files
+db.control.url=jdbc:oracle:thin:@10.117.169.33:1521:oracsap
+db.control.user=sapinterfQAS
+db.control.password=SAPIN
+db.log.url=jdbc:mysql://localhost:3306/interfaces
+db.log.user=interfaces
+db.log.password=interfaces
+db.mogi.url=jdbc:mysql://localhost:3306/balanzamo
+db.mogi.user=balanzamo
+db.mogi.password=balanzamo
+db.cabo.url=jdbc:mysql://localhost:3306/balanzacab
+db.cabo.user=balanzacab
+db.cabo.password=balanzacab
+db.balsa.url=jdbc:mysql://localhost:3306/balanzabal
+db.balsa.user=balanzabal
+db.balsa.password=balanzabal
+db.trombudo.url=jdbc:mysql://localhost:3306/balanzatro
+db.trombudo.user=balanzatro
+db.trombudo.password=balanzatro
+db.conchal.url=jdbc:mysql://localhost:3306/balanzacon
+db.conchal.user=balanzacon
+db.conchal.password=balanzacon
+db.alcantara.url=jdbc:mysql://localhost:3306/balanzaalc
+db.alcantara.user=balanzaalc
+db.alcantara.password=balanzaalc
+db.pool.size.min=3
+db.pool.size.initial=5
+db.pool.size.max=10
+db.pool.idletime.max=600
+db.pool.connectionage.max=1800
+db.pool.helperthreads=10
+db.control.pool.size.min=1
+db.control.pool.size.initial=1
+db.control.pool.size.max=3
+# 1 minuto
+db.control.pool.idletime.max=60
+# 5 minutos
+db.control.pool.connectionage.max=300
+db.control.pool.helperthreads=3
+db.control.pool.checkoutTimeout=0

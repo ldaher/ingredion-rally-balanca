@@ -1,0 +1,1503 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!DOCTYPE mule-configuration PUBLIC "-//MuleSource //DTD mule-configuration XML V1.0//EN"
+                                "http://mule.mulesource.org/dtds/mule-configuration.dtd">
+<mule-configuration id="PDM-Balanza" version="1.0">
+	<description>Rally</description>
+	<environment-properties>
+		<file-properties location="../rally.properties"/>
+	</environment-properties>
+	<mule-environment-properties serverUrl="" enableMessageEvents="true" synchronous="true"/>
+	<container-context
+		className="org.mule.extras.spring.SpringContainerContext">
+		<properties>
+			<property name="configFile" value="application-context.xml" />
+		</properties>
+	</container-context>
+	<agents>
+		<agent name="rmiAgent"
+			className="org.mule.management.agents.RmiRegistryAgent">
+			<properties>
+				<property name="serverUri" value="rmi://localhost:1398" />
+			</properties>
+		</agent>
+        <agent name="jmxAgent" className="com.pdm.interfaces.agents.PDMJmxAgent">
+			<properties>
+				<property name="connectorServerUrl"
+					value="service:jmx:rmi:///jndi/rmi://localhost:1398/server" />
+				<map name="connectorServerProperties">
+					<property name="jmx.remote.jndi.rebind"
+						value="true" />
+				</map>
+<!--
+				<map name="credentials">
+					<property name="muleusername" value="clizarralde" />
+					<property name="mulepassword" value="oycobe" />
+				</map>
+-->
+			</properties>
+		</agent>
+		<agent name="mx4jAgent"
+			className="org.mule.management.agents.Mx4jAgent">
+			<properties>
+				<property name="jmxAdaptorUrl"
+					value="http://0.0.0.0:9998" />
+				<property name="login" value="clizarralde" />
+				<property name="password" value="oycobe" />
+			</properties>
+		</agent>
+		<agent name="controlAndLogAgent"
+			className="com.pdm.interfaces.MessageEnvelopeBasedComponentControlAndLogAgent">
+			<properties>
+				<container-property reference="weightScaleMogRallyService"
+					name="rallyService" />
+			</properties>
+		</agent>
+	</agents>
+	<connector name="controlConnector"
+		className="org.mule.providers.jdbc.JdbcConnector">
+		<properties>
+			<map name="queries">
+				<property name="MMI0010_WEIGHT_SCALE_OUT"
+					value="insert into ZCPIMMI0010 (ID_INTERFACE, MATERIAL, PLANT, STORAGE_LOC, PURCHASE_ORDER, DELIVERY, BATCH, MOV_TYPE, QUANTITY, UNIT, PRODUCTION_DT, EXPIRATION_DT, DOCUMENT_DT, COST_CENTER, REC_STORAGE_LOC, QTY_DEL, BASE_UOM, REC_PLANT, REC_BATCH, VENDOR, BILL_LADING, CONTAINERS, UNIT_CONTAINER, VEHICLE_PLATE, GROSS_WEIGHT, UNIT_GROSS, VEHICLE_WEIGHT, UNIT_VEHICLE, CODIGO_IVA, BASE_IMPUESTO, NRO_ALEATORIO, DIGITO_VERIF, ISSUE_TYPE, PORC_HUME, PROTOCOLO, DOCNF_DT) values (${INTERFACE_ID}, ${MATERIAL}, ${PLANT}, ${STORAGE_LOC}, ${PURCHASE_ORDER}, ${DELIVERY}, ${BATCH}, ${MOV_TYPE}, ${QUANTITY}, ${UNIT}, ${PRODUCTION_DT}, ${EXPIRATION_DT}, ${DOCUMENT_DT}, ${COST_CENTER}, ${REC_STORAGE_LOC}, ${QTY_DEL}, ${BASE_UOM}, NULL, NULL, NULL, ${BILL_OF_LADING}, NULL, NULL, NULL, NULL, NULL, NULL, NULL, ${CODIGOIVA}, ${BASEDEIMPUESTO}, ${NUMEROALEATORIO}, ${DIGITOVERIFICADOR}, ${ISSUETYPE}, ${TYPE}, ${PROTOCOLO}, ${DOCNF_DT})" />
+            </map>
+			<container-property name="dataSource"
+				reference="dataSourceControl" />
+		</properties>
+		<exception-strategy
+			className="com.pdm.interfaces.MessageEnvelopeBasedComponentAndConnectorExceptionListener">
+			<properties>
+				<container-property reference="weightScaleMogRallyService"
+					name="rallyService" />
+			</properties>
+		</exception-strategy>
+	</connector>
+    <connector name="weightScaleMogConnector"
+		className="org.mule.providers.jdbc.JdbcConnector">
+		<properties>
+			<map name="queries">
+				<property name="MMI0010_WEIGHT_SCALE_MOG_TRIGGER"
+					value="select STORAGE_LOC, DELIVERY from sap_recepcion where PROCESSED='N' and ORGANIZATION_CODE='4120' LIMIT 1" />
+				<property name="SDI0080_WEIGHT_SCALE_MOG1_TRIGGER"
+					value="select numeroViaje from sap_entrega where ACK!='S' and organizacion='4120' and puesto='MOG1' LIMIT 1" />
+				<property name="SDI0080_WEIGHT_SCALE_MOG2_TRIGGER"
+					value="select numeroViaje from sap_entrega where ACK!='S' and organizacion='4120' and puesto='MOG2' LIMIT 1" />
+				<property name="SDI0080_WEIGHT_SCALE_MOG3_TRIGGER"
+					value="select numeroViaje from sap_entrega where ACK!='S' and organizacion='4120' and puesto='MOG3' LIMIT 1" />
+				<property name="MMI0040_WEIGHT_SCALE_OUT"
+					value="insert into sap_producto (ACK,MATNR,WERKS,MAKTX,MEINS,BRGEW,GEWEI,NTGEW,tipoMaterial) values ('N',${MATERIAL_NUMB},${PLANT},${DESC_MAT_PT},${UNIT_MEASURE},${GROSS_WEIGHT},${WEIGHT_UNIT},${NEW_WEIGHT},${MATERIAL_TYPE})" />
+				<property name="MMI0100_WEIGHT_SCALE_OUT"
+					value="insert into sap_orden_de_compra (EBELP, LGORT, MEINS, BPRME, EKORG, EBELN, TXZ01, MATNR, BUKRS, MENGE, LIFNR, WERKS) values (${EBELP}, ${LGORT}, ${MEINS}, ${BPRME}, ${EKORG}, ${EBELN}, ${TXZ01}, ${MATNR}, ${BUKRS}, ${MENGE}, ${LIFNR}, ${WERKS}) " />
+				<property name="MMI0090_WEIGHT_SCALE_OUT"
+					value="insert into sap_proveedor (ACK, LIFNR, BUKRS, NAME1, STCD1, EKORG, REGIO) values ('N', ${LIFNR}, ${BUKRS}, ${NAME1}, ${STCD1}, ${EKORG}, substr(${REGIO},1,2)) " />
+				<property name="SDI0070_WEIGHT_SCALE_OUT"
+					value="insert into sap_shipment (pais, planta, almacen, numeroViaje, fechaViaje, numeroPedido, numeroLinea, codigoCliente, cliente, codProducto, descProducto, lote, cantidad, unidadMedida, incoterms) values (${PAIS}, ${PLANTA}, ${ALMACEN}, ${NUMERO_VIAJE}, ${FECHA_VIAJE}, ${NUMERO_PEDIDO}, ${NUMERO_LINEA}, ${CODIGO_CLIENTE}, ${CLIENTE}, ${CODIGO_PRODUCTO}, ${DESC_PRODUCTO}, ${LOTE}, ${CANTIDAD}, ${UNIDAD_MEDIDA}, ${INCOTERMS}) " />
+			</map>
+			<container-property name="dataSource"
+				reference="dataSourceWeightScaleMog" />
+		</properties>
+		<exception-strategy
+			className="com.pdm.interfaces.MessageEnvelopeBasedComponentAndConnectorExceptionListener">
+			<properties>
+				<container-property reference="weightScaleMogRallyService"
+					name="rallyService" />
+			</properties>
+		</exception-strategy>
+	</connector>
+    <connector name="weightScaleCabConnector"
+		className="org.mule.providers.jdbc.JdbcConnector">
+		<properties>
+			<map name="queries">
+				<property name="MMI0010_WEIGHT_SCALE_CAB_TRIGGER"
+					value="select STORAGE_LOC, DELIVERY from sap_recepcion where PROCESSED='N' and ORGANIZATION_CODE='4130' LIMIT 1" />
+				<property name="SDI0080_WEIGHT_SCALE_CAB1_TRIGGER"
+					value="select numeroViaje from sap_entrega where ACK!='S' and organizacion='4130' and puesto='CAB1' LIMIT 1" />
+				<property name="SDI0080_WEIGHT_SCALE_CAB2_TRIGGER"
+					value="select numeroViaje from sap_entrega where ACK!='S' and organizacion='4130' and puesto='CAB2' LIMIT 1" />
+				<property name="MMI0040_WEIGHT_SCALE_OUT"
+					value="insert into sap_producto (ACK,MATNR,WERKS,MAKTX,MEINS,BRGEW,GEWEI,NTGEW,tipoMaterial) values ('N',${MATERIAL_NUMB},${PLANT},${DESC_MAT_PT},${UNIT_MEASURE},${GROSS_WEIGHT},${WEIGHT_UNIT},${NEW_WEIGHT},${MATERIAL_TYPE})" />
+				<property name="MMI0100_WEIGHT_SCALE_OUT"
+					value="insert into sap_orden_de_compra (EBELP, LGORT, MEINS, BPRME, EKORG, EBELN, TXZ01, MATNR, BUKRS, MENGE, LIFNR, WERKS) values (${EBELP}, ${LGORT}, ${MEINS}, ${BPRME}, ${EKORG}, ${EBELN}, ${TXZ01}, ${MATNR}, ${BUKRS}, ${MENGE}, ${LIFNR}, ${WERKS}) " />
+				<property name="MMI0090_WEIGHT_SCALE_OUT"
+					value="insert into sap_proveedor (ACK, LIFNR, BUKRS, NAME1, STCD1, EKORG, REGIO) values ('N', ${LIFNR}, ${BUKRS}, ${NAME1}, ${STCD1}, ${EKORG}, substr(${REGIO},1,2)) " />
+				<property name="SDI0070_WEIGHT_SCALE_OUT"
+					value="insert into sap_shipment (pais, planta, almacen, numeroViaje, fechaViaje, numeroPedido, numeroLinea, codigoCliente, cliente, codProducto, descProducto, lote, cantidad, unidadMedida, incoterms) values (${PAIS}, ${PLANTA}, ${ALMACEN}, ${NUMERO_VIAJE}, ${FECHA_VIAJE}, ${NUMERO_PEDIDO}, ${NUMERO_LINEA}, ${CODIGO_CLIENTE}, ${CLIENTE}, ${CODIGO_PRODUCTO}, ${DESC_PRODUCTO}, ${LOTE}, ${CANTIDAD}, ${UNIDAD_MEDIDA}, ${INCOTERMS}) " />
+			</map>
+			<container-property name="dataSource"
+				reference="dataSourceWeightScaleCab" />
+		</properties>
+		<exception-strategy
+			className="com.pdm.interfaces.MessageEnvelopeBasedComponentAndConnectorExceptionListener">
+			<properties>
+				<container-property reference="weightScaleCabRallyService"
+					name="rallyService" />
+			</properties>
+		</exception-strategy>
+	</connector>
+    <connector name="weightScaleBalConnector"
+		className="org.mule.providers.jdbc.JdbcConnector">
+		<properties>
+			<map name="queries">
+				<property name="MMI0010_WEIGHT_SCALE_BAL_TRIGGER"
+					value="select STORAGE_LOC, DELIVERY from sap_recepcion where PROCESSED='N' and ORGANIZATION_CODE='4140' LIMIT 1" />
+				<property name="SDI0080_WEIGHT_SCALE_BAL1_TRIGGER"
+					value="select numeroViaje from sap_entrega where ACK!='S' and organizacion='4140' and puesto='BAL1' LIMIT 1" />
+				<property name="MMI0040_WEIGHT_SCALE_OUT"
+					value="insert into sap_producto (ACK,MATNR,WERKS,MAKTX,MEINS,BRGEW,GEWEI,NTGEW,tipoMaterial) values ('N',${MATERIAL_NUMB},${PLANT},${DESC_MAT_PT},${UNIT_MEASURE},${GROSS_WEIGHT},${WEIGHT_UNIT},${NEW_WEIGHT},${MATERIAL_TYPE})" />
+				<property name="MMI0100_WEIGHT_SCALE_OUT"
+					value="insert into sap_orden_de_compra (EBELP, LGORT, MEINS, BPRME, EKORG, EBELN, TXZ01, MATNR, BUKRS, MENGE, LIFNR, WERKS) values (${EBELP}, ${LGORT}, ${MEINS}, ${BPRME}, ${EKORG}, ${EBELN}, ${TXZ01}, ${MATNR}, ${BUKRS}, ${MENGE}, ${LIFNR}, ${WERKS}) " />
+				<property name="MMI0090_WEIGHT_SCALE_OUT"
+					value="insert into sap_proveedor (ACK, LIFNR, BUKRS, NAME1, STCD1, EKORG, REGIO) values ('N', ${LIFNR}, ${BUKRS}, ${NAME1}, ${STCD1}, ${EKORG}, substr(${REGIO},1,2)) " />
+				<property name="SDI0070_WEIGHT_SCALE_OUT"
+					value="insert into sap_shipment (pais, planta, almacen, numeroViaje, fechaViaje, numeroPedido, numeroLinea, codigoCliente, cliente, codProducto, descProducto, lote, cantidad, unidadMedida, incoterms) values (${PAIS}, ${PLANTA}, ${ALMACEN}, ${NUMERO_VIAJE}, ${FECHA_VIAJE}, ${NUMERO_PEDIDO}, ${NUMERO_LINEA}, ${CODIGO_CLIENTE}, ${CLIENTE}, ${CODIGO_PRODUCTO}, ${DESC_PRODUCTO}, ${LOTE}, ${CANTIDAD}, ${UNIDAD_MEDIDA}, ${INCOTERMS}) " />
+			</map>
+			<container-property name="dataSource"
+				reference="dataSourceWeightScaleBal" />
+		</properties>
+		<exception-strategy
+			className="com.pdm.interfaces.MessageEnvelopeBasedComponentAndConnectorExceptionListener">
+			<properties>
+				<container-property reference="weightScaleBalRallyService"
+					name="rallyService" />
+			</properties>
+		</exception-strategy>
+	</connector>
+    <connector name="weightScaleTroConnector"
+		className="org.mule.providers.jdbc.JdbcConnector">
+		<properties>
+			<map name="queries">
+				<property name="MMI0010_WEIGHT_SCALE_TRO_TRIGGER"
+					value="select STORAGE_LOC, DELIVERY from sap_recepcion where PROCESSED='N' and ORGANIZATION_CODE='4180' LIMIT 1" />
+				<property name="SDI0080_WEIGHT_SCALE_TRO1_TRIGGER"
+					value="select numeroViaje from sap_entrega where ACK!='S' and organizacion='4180' and puesto='TRO1' LIMIT 1" />
+				<property name="MMI0040_WEIGHT_SCALE_OUT"
+					value="insert into sap_producto (ACK,MATNR,WERKS,MAKTX,MEINS,BRGEW,GEWEI,NTGEW,tipoMaterial) values ('N',${MATERIAL_NUMB},${PLANT},${DESC_MAT_PT},${UNIT_MEASURE},${GROSS_WEIGHT},${WEIGHT_UNIT},${NEW_WEIGHT},${MATERIAL_TYPE})" />
+				<property name="MMI0100_WEIGHT_SCALE_OUT"
+					value="insert into sap_orden_de_compra (EBELP, LGORT, MEINS, BPRME, EKORG, EBELN, TXZ01, MATNR, BUKRS, MENGE, LIFNR, WERKS) values (${EBELP}, ${LGORT}, ${MEINS}, ${BPRME}, ${EKORG}, ${EBELN}, ${TXZ01}, ${MATNR}, ${BUKRS}, ${MENGE}, ${LIFNR}, ${WERKS}) " />
+				<property name="MMI0090_WEIGHT_SCALE_OUT"
+					value="insert into sap_proveedor (ACK, LIFNR, BUKRS, NAME1, STCD1, EKORG, REGIO) values ('N', ${LIFNR}, ${BUKRS}, ${NAME1}, ${STCD1}, ${EKORG}, substr(${REGIO},1,2)) " />
+				<property name="SDI0070_WEIGHT_SCALE_OUT"
+					value="insert into sap_shipment (pais, planta, almacen, numeroViaje, fechaViaje, numeroPedido, numeroLinea, codigoCliente, cliente, codProducto, descProducto, lote, cantidad, unidadMedida, incoterms) values (${PAIS}, ${PLANTA}, ${ALMACEN}, ${NUMERO_VIAJE}, ${FECHA_VIAJE}, ${NUMERO_PEDIDO}, ${NUMERO_LINEA}, ${CODIGO_CLIENTE}, ${CLIENTE}, ${CODIGO_PRODUCTO}, ${DESC_PRODUCTO}, ${LOTE}, ${CANTIDAD}, ${UNIDAD_MEDIDA}, ${INCOTERMS}) " />
+			</map>
+			<container-property name="dataSource"
+				reference="dataSourceWeightScaleTro" />
+		</properties>
+		<exception-strategy
+			className="com.pdm.interfaces.MessageEnvelopeBasedComponentAndConnectorExceptionListener">
+			<properties>
+				<container-property reference="weightScaleTroRallyService"
+					name="rallyService" />
+			</properties>
+		</exception-strategy>
+	</connector>
+    <connector name="weightScaleConConnector"
+		className="org.mule.providers.jdbc.JdbcConnector">
+		<properties>
+			<map name="queries">
+				<property name="MMI0010_WEIGHT_SCALE_CON_TRIGGER"
+					value="select STORAGE_LOC, DELIVERY from sap_recepcion where PROCESSED='N' and ORGANIZATION_CODE='4160' LIMIT 1" />
+				<property name="SDI0080_WEIGHT_SCALE_CON1_TRIGGER"
+					value="select numeroViaje from sap_entrega where ACK!='S' and organizacion='4160' and puesto='CON1' LIMIT 1" />
+				<property name="MMI0040_WEIGHT_SCALE_OUT"
+					value="insert into sap_producto (ACK,MATNR,WERKS,MAKTX,MEINS,BRGEW,GEWEI,NTGEW,tipoMaterial) values ('N',${MATERIAL_NUMB},${PLANT},${DESC_MAT_PT},${UNIT_MEASURE},${GROSS_WEIGHT},${WEIGHT_UNIT},${NEW_WEIGHT},${MATERIAL_TYPE})" />
+				<property name="MMI0100_WEIGHT_SCALE_OUT"
+					value="insert into sap_orden_de_compra (EBELP, LGORT, MEINS, BPRME, EKORG, EBELN, TXZ01, MATNR, BUKRS, MENGE, LIFNR, WERKS) values (${EBELP}, ${LGORT}, ${MEINS}, ${BPRME}, ${EKORG}, ${EBELN}, ${TXZ01}, ${MATNR}, ${BUKRS}, ${MENGE}, ${LIFNR}, ${WERKS}) " />
+				<property name="MMI0090_WEIGHT_SCALE_OUT"
+					value="insert into sap_proveedor (ACK, LIFNR, BUKRS, NAME1, STCD1, EKORG, REGIO) values ('N', ${LIFNR}, ${BUKRS}, ${NAME1}, ${STCD1}, ${EKORG}, substr(${REGIO},1,2)) " />
+				<property name="SDI0070_WEIGHT_SCALE_OUT"
+					value="insert into sap_shipment (pais, planta, almacen, numeroViaje, fechaViaje, numeroPedido, numeroLinea, codigoCliente, cliente, codProducto, descProducto, lote, cantidad, unidadMedida, incoterms) values (${PAIS}, ${PLANTA}, ${ALMACEN}, ${NUMERO_VIAJE}, ${FECHA_VIAJE}, ${NUMERO_PEDIDO}, ${NUMERO_LINEA}, ${CODIGO_CLIENTE}, ${CLIENTE}, ${CODIGO_PRODUCTO}, ${DESC_PRODUCTO}, ${LOTE}, ${CANTIDAD}, ${UNIDAD_MEDIDA}, ${INCOTERMS}) " />
+			</map>
+			<container-property name="dataSource"
+				reference="dataSourceWeightScaleCon" />
+		</properties>
+		<exception-strategy
+			className="com.pdm.interfaces.MessageEnvelopeBasedComponentAndConnectorExceptionListener">
+			<properties>
+				<container-property reference="weightScaleConRallyService"
+					name="rallyService" />
+			</properties>
+		</exception-strategy>
+	</connector>
+	<connector name="sftpConnector"
+		className="com.pdm.interfaces.transports.RallySftpConnector">
+		<properties>
+    		<property name="pollingFrequency" value="30000"/>
+    		<property name="autoDelete" value="false"/>
+		</properties>
+	</connector>
+    <connector name="vmQueue" className="org.mule.providers.vm.VMConnector">
+        <properties>
+            <property name="queueEvents" value="true"/>
+        </properties>
+    </connector>
+    <transformers>
+        <transformer name="stringToEmailMessage" className="org.mule.providers.email.transformers.StringToEmailMessage"/>
+        <transformer name="listOfMapsToMsgText" className="com.pdm.interfaces.transformers.ListOfMapsToMsgTextTransformer"/>
+        <transformer name="messageEnvelopeExtractorTransformer"
+			className="com.pdm.interfaces.transformers.MessageEnvelopeExtractorTransformer">
+			<properties>
+				<container-property reference="weightScaleMogRallyService"
+					name="rallyService" />
+			</properties>
+		</transformer>
+		<transformer name="listOfMapsToCSVTransformer"
+			className="com.pdm.interfaces.transformers.ListOfMapsToDelimiterBasedTextFileTransformer">
+			<properties>
+				<property name="delimiter" value="DOTANDCOMMA" />
+			</properties>
+		</transformer>
+		<transformer name="listOfMapsToTabSeparatedValuesTransformer"
+			className="com.pdm.interfaces.transformers.ListOfMapsToDelimiterBasedTextFileTransformer">
+			<properties>
+				<property name="delimiter" value="TAB" />
+			</properties>
+		</transformer>
+		<transformer name="listOfMapsToXLSTransformer"
+			className="com.pdm.interfaces.transformers.ListOfMapsToXLSTransformer" />
+		
+		<transformer
+			name="listOfMapsToFixedWidthBasedTextFileTransformerByColumnNames"
+			className="com.pdm.interfaces.transformers.ListOfMapsToFixedWidthBasedTextFileTransformerByColumnNames">
+			<properties>
+				<map name="columnWidths">
+				    <!-- Balanza de Mogi -->
+				    <property name="SDI0080_WEIGHT_SCALE_MOG1" value="10;10;6;10;10;16;3;10;20;20;35" />
+				    <property name="SDI0080_WEIGHT_SCALE_MOG2" value="10;10;6;10;10;16;3;10;20;20;35" />
+					<property name="SDI0080_WEIGHT_SCALE_MOG3" value="10;10;6;10;10;16;3;10;20;20;35" />
+                    <!-- Balanza de Mogi -->
+					<!-- Balanza de Cabo -->
+					<property name="SDI0080_WEIGHT_SCALE_CAB1" value="10;10;6;10;10;16;3;10;20;20;35" />
+				    <property name="SDI0080_WEIGHT_SCALE_CAB2" value="10;10;6;10;10;16;3;10;20;20;35" />
+                    <!-- Balanza de Cabo -->
+                    <!-- Balanza de Balsa -->
+					<property name="SDI0080_WEIGHT_SCALE_BAL1" value="10;10;6;10;10;16;3;10;20;20;35" />
+					<!-- Balanza de Balsa -->
+                    <!-- Balanza de Trombudo -->
+					<property name="SDI0080_WEIGHT_SCALE_TRO1" value="10;10;6;10;10;16;3;10;20;20;35" />
+					<!-- Balanza de Trombudo -->
+                    <!-- Balanza de Conchal -->
+					<property name="SDI0080_WEIGHT_SCALE_CON1" value="10;10;6;10;10;16;3;10;20;20;35" />
+					<!-- Balanza de Conchal -->
+				</map>
+				<map name="columnNames">
+					<!-- Balanza de Mogi -->
+				    <property name="SDI0080_WEIGHT_SCALE_MOG1" value="numeroViaje;numeroPedido;numeroItem;codigoCliente;codigoLote;cantidad;unidadMedida;codigoTransportista;docChofer;nombreChofer;PATENTES" />
+				    <property name="SDI0080_WEIGHT_SCALE_MOG2" value="numeroViaje;numeroPedido;numeroItem;codigoCliente;codigoLote;cantidad;unidadMedida;codigoTransportista;docChofer;nombreChofer;PATENTES" />
+				    <property name="SDI0080_WEIGHT_SCALE_MOG3" value="numeroViaje;numeroPedido;numeroItem;codigoCliente;codigoLote;cantidad;unidadMedida;codigoTransportista;docChofer;nombreChofer;PATENTES" />
+					<!-- Balanza de Mogi -->
+					<!-- Balanza de Cabo -->
+				    <property name="SDI0080_WEIGHT_SCALE_CAB1" value="numeroViaje;numeroPedido;numeroItem;codigoCliente;codigoLote;cantidad;unidadMedida;codigoTransportista;docChofer;nombreChofer;PATENTES" />
+				    <property name="SDI0080_WEIGHT_SCALE_CAB2" value="numeroViaje;numeroPedido;numeroItem;codigoCliente;codigoLote;cantidad;unidadMedida;codigoTransportista;docChofer;nombreChofer;PATENTES" />
+					<!-- Balanza de Cabo -->
+					<!-- Balanza de Balsa -->
+				    <property name="SDI0080_WEIGHT_SCALE_BAL1" value="numeroViaje;numeroPedido;numeroItem;codigoCliente;codigoLote;cantidad;unidadMedida;codigoTransportista;docChofer;nombreChofer;PATENTES" />
+					<!-- Balanza de Balsa -->
+					<!-- Balanza de Trombudo -->
+				    <property name="SDI0080_WEIGHT_SCALE_TRO1" value="numeroViaje;numeroPedido;numeroItem;codigoCliente;codigoLote;cantidad;unidadMedida;codigoTransportista;docChofer;nombreChofer;PATENTES" />
+					<!-- Balanza de Trombudo -->
+					<!-- Balanza de Conchal -->
+				    <property name="SDI0080_WEIGHT_SCALE_CON1" value="numeroViaje;numeroPedido;numeroItem;codigoCliente;codigoLote;cantidad;unidadMedida;codigoTransportista;docChofer;nombreChofer;PATENTES" />
+					<!-- Balanza de Conchal -->
+				</map>
+			</properties>
+		</transformer>
+		<transformer
+			name="fixedWidthBasedTextFileToListOfMapsTransformer"
+			className="com.pdm.interfaces.transformers.FixedWidthBasedTextFileToListOfMapsTransformer">
+			<properties>
+				<map name="columnWidths">
+		                    <property name="SDI0070_WEIGHT_SCALE_MOG"
+						value="3;4;4;16;10;8;10;6;10;40;18;40;10;17;3;3" />
+		                    <property name="SDI0070_WEIGHT_SCALE_CAB"
+						value="3;4;4;16;10;8;10;6;10;40;18;40;10;17;3;3" />
+		                    <property name="SDI0070_WEIGHT_SCALE_BAL"
+						value="3;4;4;16;10;8;10;6;10;40;18;40;10;17;3;3" />
+		                    <property name="SDI0070_WEIGHT_SCALE_TRO"
+						value="3;4;4;16;10;8;10;6;10;40;18;40;10;17;3;3" />
+		                    <property name="SDI0070_WEIGHT_SCALE_CON"
+						value="3;4;4;16;10;8;10;6;10;40;18;40;10;17;3;3" />
+				</map>
+				<map name="columnNames">
+		                    <property name="SDI0070_WEIGHT_SCALE_MOG"
+						value="PAIS;PLANTA;ALMACEN;DESC_ALMACEN;NUMERO_VIAJE;FECHA_VIAJE;NUMERO_PEDIDO;NUMERO_LINEA;CODIGO_CLIENTE;CLIENTE;CODIGO_PRODUCTO;DESC_PRODUCTO;LOTE;CANTIDAD;UNIDAD_MEDIDA;INCOTERMS" />
+		                    <property name="SDI0070_WEIGHT_SCALE_CAB"
+						value="PAIS;PLANTA;ALMACEN;DESC_ALMACEN;NUMERO_VIAJE;FECHA_VIAJE;NUMERO_PEDIDO;NUMERO_LINEA;CODIGO_CLIENTE;CLIENTE;CODIGO_PRODUCTO;DESC_PRODUCTO;LOTE;CANTIDAD;UNIDAD_MEDIDA;INCOTERMS" />
+		                    <property name="SDI0070_WEIGHT_SCALE_BAL"
+						value="PAIS;PLANTA;ALMACEN;DESC_ALMACEN;NUMERO_VIAJE;FECHA_VIAJE;NUMERO_PEDIDO;NUMERO_LINEA;CODIGO_CLIENTE;CLIENTE;CODIGO_PRODUCTO;DESC_PRODUCTO;LOTE;CANTIDAD;UNIDAD_MEDIDA;INCOTERMS" />
+		                    <property name="SDI0070_WEIGHT_SCALE_TRO"
+						value="PAIS;PLANTA;ALMACEN;DESC_ALMACEN;NUMERO_VIAJE;FECHA_VIAJE;NUMERO_PEDIDO;NUMERO_LINEA;CODIGO_CLIENTE;CLIENTE;CODIGO_PRODUCTO;DESC_PRODUCTO;LOTE;CANTIDAD;UNIDAD_MEDIDA;INCOTERMS" />
+		                    <property name="SDI0070_WEIGHT_SCALE_CON"
+						value="PAIS;PLANTA;ALMACEN;DESC_ALMACEN;NUMERO_VIAJE;FECHA_VIAJE;NUMERO_PEDIDO;NUMERO_LINEA;CODIGO_CLIENTE;CLIENTE;CODIGO_PRODUCTO;DESC_PRODUCTO;LOTE;CANTIDAD;UNIDAD_MEDIDA;INCOTERMS" />
+				</map>
+			</properties>
+		</transformer>
+		<transformer name="xLSToTabSeparatedValuesTransformer"
+			className="com.pdm.interfaces.transformers.XLSToDelimiterBasedTextFileTransformer">
+			<properties>
+				<property name="delimiter" value="TAB" />
+			</properties>
+		</transformer>
+		<transformer name="SDI0100OgnlExpressionsTransformer"
+			className="com.pdm.interfaces.transformers.OGNLExpressionsOnListOfMapsMessageEnvelopeBasedTransformer">
+			<properties>
+				<list name="expressions">
+					<entry
+						value="row.CANTIDAD=@java.lang.Float@parseFloat(row.CANTIDAD) / 1000f" />
+				</list>
+			</properties>
+		</transformer>
+		<transformer name="SDI0130OgnlExpressionsTransformer"
+			className="com.pdm.interfaces.transformers.OGNLExpressionsOnListOfMapsMessageEnvelopeBasedTransformer">
+			<properties>
+				<list name="expressions">
+					<entry
+						value="row.cantidad=@com.pdm.interfaces.transformers.OGNLExpressionsOnListOfMapsMessageEnvelopeBasedTransformer@convertDoubleToString(row.cantidad, 16)" />
+				</list>
+			</properties>
+		</transformer>
+		<transformer name="SDI0070OgnlExpressionsTransformer"
+			className="com.pdm.interfaces.transformers.OGNLExpressionsOnListOfMapsMessageEnvelopeBasedTransformer">
+			<properties>
+				<list name="expressions">
+					<entry
+						value="row.CANTIDAD= @java.lang.Float@parseFloat(row.CANTIDAD) / 1000f" />
+				</list>
+			</properties>
+		</transformer>
+		<transformer name="SDI0080OgnlExpressionsTransformer"
+			className="com.pdm.interfaces.transformers.OGNLExpressionsOnListOfMapsMessageEnvelopeBasedTransformer">
+			<properties>
+				<list name="expressions">
+					<entry
+						value="row.PATENTES=@com.pdm.interfaces.transformers.OGNLExpressionsOnListOfMapsMessageEnvelopeBasedTransformer@concatIfNotNull(new String[] {row.patente1, row.patente2, row.patente3}, 35, ' ')" />
+					<entry
+						value="row.cantidad=@com.pdm.interfaces.transformers.OGNLExpressionsOnListOfMapsMessageEnvelopeBasedTransformer@convertDoubleToString(row.cantidad, 16)" />
+				</list>
+			</properties>
+		</transformer>
+		<transformer name="MMI0090OrganizationFilter"
+			className="com.pdm.interfaces.transformers.MMI0090OrganizationFilter" />
+		<transformer name="inputStreamToByteArrayTransformer" className="com.pdm.interfaces.transformers.InputStreamToByteArrayMessageEnvelopeBasedTransformer"/>
+	
+		<transformer name="viajesTextFileToListOfMapsTransformer" className="com.pdm.interfaces.transformers.ViajesTextFileToListOfMapsTransformer"/>
+		<transformer name="listOfMapsToXMLTransformer"  className="com.pdm.interfaces.transformers.ListOfMapsToXMLTransformer" />
+	</transformers>
+	<model name="pdm">
+		<exception-strategy
+			className="com.pdm.interfaces.MessageEnvelopeBasedComponentAndConnectorExceptionListener">
+			<properties>
+				<container-property reference="weightScaleMogRallyService"
+					name="rallyService" />
+			</properties>
+		</exception-strategy>
+        <mule-descriptor name="MMI0040_WEIGHT_SCALE_MOG"
+			implementation="com.pdm.interfaces.components.DBInputOutboundMessageEnvelopeBasedComponent">
+			<inbound-router>
+                <endpoint address="quartz:/MMI0040_WEIGHT_SCALE_MOG_TRIGGER">
+                    <properties>
+                        <property name="cronExpression" value="0 40 23 ? * *"/>
+                    </properties>
+                </endpoint>
+                <endpoint address="vm://MMI0040_WEIGHT_SCALE_MOG_QUEUE" connector="vmQueue"/>
+            </inbound-router>
+			<outbound-router>
+				<router
+					className="com.pdm.interfaces.ListOfMapsMessageEnvelopeBasedMessageSplitter"
+					transformer="messageEnvelopeExtractorTransformer">
+					<endpoint address="jdbc://MMI0040_WEIGHT_SCALE_OUT"
+						connector="weightScaleMogConnector"
+						transformers="messageEnvelopeExtractorTransformer" />
+				</router>
+			</outbound-router>
+			<properties>
+				<property name="controlQuery"
+					value="select MATERIAL_NUMB,PLANT,DESC_MAT_EN,DESC_MAT_PT,DESC_MAT_ES,UNIT_MEASURE,MATERIAL_GROUP,DIVISION,MATERIAL_TYPE,X_PLANT_MATL,VALID_FROM_CR,GROSS_WEIGHT,WEIGHT_UNIT,NEW_WEIGHT,VOLUME,VOLUME_UNIT,SIZE_DIMENSION,EAN_UPC,EAN_CATEGORY,MATL_GRP_PACK,PROD_HIERARCHY,TRANS_GRP,BATCH_MANAG,MIN_REM_SHELF,TOTAL_SHELF,QM_PROC_ACTIVE,MAT_FREIG_GRP,AVAILAB_CHECK,SETUP_TIME,PROC_TIME,LOADINGGRP,BASE_QTY,COMM_IMP_CODE,EXP_IMP_GRP,PRODCOM_NO,CONTROL_CODE,COUNTRY_ORIGIN,REGION_ORIGIN,CAP_PROD_LIST,CAP_PROD_GROUP,EXEMP_CERT,EXEMP_CERT_NO,ISS_DATE_EX_CE,MAT_CFOP_CATEG,PURCH_GROUP,PLANT_SP_MATL,VALID_FROM_SP,AUTOM_PO,GR_PROCES_TIME,QUOTA_ARR_USAG,SOURCE_LIST,MRP_GROUP,ABC_INDIC,MRP_TYPE,REORDER_POINT,MRP_CTRL,LOT_SIZE,MIN_LOT_SIZE,MAX_LOT_SIZE,MAX_STK_LEVEL,PROCUR_TYPE,SPECIAL_PROCUR,PROD_STOR_LOC,PLN_DELIV_TIME,SAFETY_STOCK,SELEC_METHOD,COMP_SCRAP,INDIV_COLL,REPETIT_MFG,REM_PROFILE,VER_INDICATOR,UNIT_ISSUE,CC_PHYS_INV,CC_FIXED,TIME_UNIT,STK_DETERM_GRP,POST_INSP_STK,QM_MAT_AUTH,QM_CTRL_KEY,CERTIF_TYPE,PROFIT_CENTER,CO_PRODUCT,VALUAT_AREA,VALUAT_CLASS,STAND_PRICE,PRICE_UNIT,ML_ACT,WITH_QTY_STRUC,ORIGIN_GROUP,PLANNED_PRICE,PRICE_CTRL,MOV_PRICE,PREV_PLN_PRICE,PRICE_DETERM,STORAGE_BIN from zcpimmi0040 where ID_INTERFACE = ${INTERFACE_ID} and PLANT = '4120'" />
+				<container-property reference="weightScaleMogRallyService" name="rallyService" />
+				<property name="countryCode" value="BR" />
+				<property name="companyCode" value="4101" />
+				<property name="targetSys" value="BALANCAMOG" />
+				<property name="sourceSys" value="SAP" />
+                <property name="interfaceCode" value="MMI0040"/>
+            </properties>
+        </mule-descriptor>
+        <mule-descriptor name="MMI0040_WEIGHT_SCALE_CAB"
+			implementation="com.pdm.interfaces.components.DBInputOutboundMessageEnvelopeBasedComponent">
+			<inbound-router>
+                <endpoint address="quartz:/MMI0040_WEIGHT_SCALE_CAB_TRIGGER">
+                    <properties>
+                        <property name="cronExpression" value="0 50 23 ? * *"/>
+                    </properties>
+                </endpoint>
+                <endpoint address="vm://MMI0040_WEIGHT_SCALE_CAB_QUEUE" connector="vmQueue"/>
+            </inbound-router>
+			<outbound-router>
+				<router
+					className="com.pdm.interfaces.ListOfMapsMessageEnvelopeBasedMessageSplitter"
+					transformer="messageEnvelopeExtractorTransformer">
+					<endpoint address="jdbc://MMI0040_WEIGHT_SCALE_OUT"
+						connector="weightScaleCabConnector"
+						transformers="messageEnvelopeExtractorTransformer" />
+				</router>
+			</outbound-router>
+			<properties>
+				<property name="controlQuery"
+					value="select MATERIAL_NUMB,PLANT,DESC_MAT_EN,DESC_MAT_PT,DESC_MAT_ES,UNIT_MEASURE,MATERIAL_GROUP,DIVISION,MATERIAL_TYPE,X_PLANT_MATL,VALID_FROM_CR,GROSS_WEIGHT,WEIGHT_UNIT,NEW_WEIGHT,VOLUME,VOLUME_UNIT,SIZE_DIMENSION,EAN_UPC,EAN_CATEGORY,MATL_GRP_PACK,PROD_HIERARCHY,TRANS_GRP,BATCH_MANAG,MIN_REM_SHELF,TOTAL_SHELF,QM_PROC_ACTIVE,MAT_FREIG_GRP,AVAILAB_CHECK,SETUP_TIME,PROC_TIME,LOADINGGRP,BASE_QTY,COMM_IMP_CODE,EXP_IMP_GRP,PRODCOM_NO,CONTROL_CODE,COUNTRY_ORIGIN,REGION_ORIGIN,CAP_PROD_LIST,CAP_PROD_GROUP,EXEMP_CERT,EXEMP_CERT_NO,ISS_DATE_EX_CE,MAT_CFOP_CATEG,PURCH_GROUP,PLANT_SP_MATL,VALID_FROM_SP,AUTOM_PO,GR_PROCES_TIME,QUOTA_ARR_USAG,SOURCE_LIST,MRP_GROUP,ABC_INDIC,MRP_TYPE,REORDER_POINT,MRP_CTRL,LOT_SIZE,MIN_LOT_SIZE,MAX_LOT_SIZE,MAX_STK_LEVEL,PROCUR_TYPE,SPECIAL_PROCUR,PROD_STOR_LOC,PLN_DELIV_TIME,SAFETY_STOCK,SELEC_METHOD,COMP_SCRAP,INDIV_COLL,REPETIT_MFG,REM_PROFILE,VER_INDICATOR,UNIT_ISSUE,CC_PHYS_INV,CC_FIXED,TIME_UNIT,STK_DETERM_GRP,POST_INSP_STK,QM_MAT_AUTH,QM_CTRL_KEY,CERTIF_TYPE,PROFIT_CENTER,CO_PRODUCT,VALUAT_AREA,VALUAT_CLASS,STAND_PRICE,PRICE_UNIT,ML_ACT,WITH_QTY_STRUC,ORIGIN_GROUP,PLANNED_PRICE,PRICE_CTRL,MOV_PRICE,PREV_PLN_PRICE,PRICE_DETERM,STORAGE_BIN from zcpimmi0040 where ID_INTERFACE = ${INTERFACE_ID} and PLANT = '4130'" />
+				<container-property reference="weightScaleCabRallyService" name="rallyService" />
+				<property name="countryCode" value="BR" />
+				<property name="companyCode" value="4101" />
+				<property name="targetSys" value="BALANCACAB" />
+				<property name="sourceSys" value="SAP" />
+                <property name="interfaceCode" value="MMI0040"/>
+            </properties>
+        </mule-descriptor>
+        <mule-descriptor name="MMI0040_WEIGHT_SCALE_BAL"
+			implementation="com.pdm.interfaces.components.DBInputOutboundMessageEnvelopeBasedComponent">
+			<inbound-router>
+                <endpoint address="quartz:/MMI0040_WEIGHT_SCALE_BAL_TRIGGER">
+                    <properties>
+                        <property name="cronExpression" value="0 55 23 ? * *"/>
+                    </properties>
+                </endpoint>
+                <endpoint address="vm://MMI0040_WEIGHT_SCALE_BAL_QUEUE" connector="vmQueue"/>
+            </inbound-router>
+			<outbound-router>
+				<router
+					className="com.pdm.interfaces.ListOfMapsMessageEnvelopeBasedMessageSplitter"
+					transformer="messageEnvelopeExtractorTransformer">
+					<endpoint address="jdbc://MMI0040_WEIGHT_SCALE_OUT"
+						connector="weightScaleBalConnector"
+						transformers="messageEnvelopeExtractorTransformer" />
+				</router>
+			</outbound-router>
+			<properties>
+				<property name="controlQuery"
+					value="select MATERIAL_NUMB,PLANT,DESC_MAT_EN,DESC_MAT_PT,DESC_MAT_ES,UNIT_MEASURE,MATERIAL_GROUP,DIVISION,MATERIAL_TYPE,X_PLANT_MATL,VALID_FROM_CR,GROSS_WEIGHT,WEIGHT_UNIT,NEW_WEIGHT,VOLUME,VOLUME_UNIT,SIZE_DIMENSION,EAN_UPC,EAN_CATEGORY,MATL_GRP_PACK,PROD_HIERARCHY,TRANS_GRP,BATCH_MANAG,MIN_REM_SHELF,TOTAL_SHELF,QM_PROC_ACTIVE,MAT_FREIG_GRP,AVAILAB_CHECK,SETUP_TIME,PROC_TIME,LOADINGGRP,BASE_QTY,COMM_IMP_CODE,EXP_IMP_GRP,PRODCOM_NO,CONTROL_CODE,COUNTRY_ORIGIN,REGION_ORIGIN,CAP_PROD_LIST,CAP_PROD_GROUP,EXEMP_CERT,EXEMP_CERT_NO,ISS_DATE_EX_CE,MAT_CFOP_CATEG,PURCH_GROUP,PLANT_SP_MATL,VALID_FROM_SP,AUTOM_PO,GR_PROCES_TIME,QUOTA_ARR_USAG,SOURCE_LIST,MRP_GROUP,ABC_INDIC,MRP_TYPE,REORDER_POINT,MRP_CTRL,LOT_SIZE,MIN_LOT_SIZE,MAX_LOT_SIZE,MAX_STK_LEVEL,PROCUR_TYPE,SPECIAL_PROCUR,PROD_STOR_LOC,PLN_DELIV_TIME,SAFETY_STOCK,SELEC_METHOD,COMP_SCRAP,INDIV_COLL,REPETIT_MFG,REM_PROFILE,VER_INDICATOR,UNIT_ISSUE,CC_PHYS_INV,CC_FIXED,TIME_UNIT,STK_DETERM_GRP,POST_INSP_STK,QM_MAT_AUTH,QM_CTRL_KEY,CERTIF_TYPE,PROFIT_CENTER,CO_PRODUCT,VALUAT_AREA,VALUAT_CLASS,STAND_PRICE,PRICE_UNIT,ML_ACT,WITH_QTY_STRUC,ORIGIN_GROUP,PLANNED_PRICE,PRICE_CTRL,MOV_PRICE,PREV_PLN_PRICE,PRICE_DETERM,STORAGE_BIN from zcpimmi0040 where ID_INTERFACE = ${INTERFACE_ID} and PLANT = '4140'" />
+				<container-property reference="weightScaleBalRallyService" name="rallyService" />
+				<property name="countryCode" value="BR" />
+				<property name="companyCode" value="4101" />
+				<property name="targetSys" value="BALANCABAL" />
+				<property name="sourceSys" value="SAP" />
+                <property name="interfaceCode" value="MMI0040"/>
+            </properties>
+        </mule-descriptor>
+        <mule-descriptor name="MMI0040_WEIGHT_SCALE_TRO"
+			implementation="com.pdm.interfaces.components.DBInputOutboundMessageEnvelopeBasedComponent">
+			<inbound-router>
+                <endpoint address="quartz:/MMI0040_WEIGHT_SCALE_TRO_TRIGGER">
+                    <properties>
+                        <property name="cronExpression" value="0 50 23 ? * *"/>
+                    </properties>
+                </endpoint>
+                <endpoint address="vm://MMI0040_WEIGHT_SCALE_TRO_QUEUE" connector="vmQueue"/>
+            </inbound-router>
+			<outbound-router>
+				<router
+					className="com.pdm.interfaces.ListOfMapsMessageEnvelopeBasedMessageSplitter"
+					transformer="messageEnvelopeExtractorTransformer">
+					<endpoint address="jdbc://MMI0040_WEIGHT_SCALE_OUT"
+						connector="weightScaleTroConnector"
+						transformers="messageEnvelopeExtractorTransformer" />
+				</router>
+			</outbound-router>
+			<properties>
+				<property name="controlQuery"
+					value="select MATERIAL_NUMB,PLANT,DESC_MAT_EN,DESC_MAT_PT,DESC_MAT_ES,UNIT_MEASURE,MATERIAL_GROUP,DIVISION,MATERIAL_TYPE,X_PLANT_MATL,VALID_FROM_CR,GROSS_WEIGHT,WEIGHT_UNIT,NEW_WEIGHT,VOLUME,VOLUME_UNIT,SIZE_DIMENSION,EAN_UPC,EAN_CATEGORY,MATL_GRP_PACK,PROD_HIERARCHY,TRANS_GRP,BATCH_MANAG,MIN_REM_SHELF,TOTAL_SHELF,QM_PROC_ACTIVE,MAT_FREIG_GRP,AVAILAB_CHECK,SETUP_TIME,PROC_TIME,LOADINGGRP,BASE_QTY,COMM_IMP_CODE,EXP_IMP_GRP,PRODCOM_NO,CONTROL_CODE,COUNTRY_ORIGIN,REGION_ORIGIN,CAP_PROD_LIST,CAP_PROD_GROUP,EXEMP_CERT,EXEMP_CERT_NO,ISS_DATE_EX_CE,MAT_CFOP_CATEG,PURCH_GROUP,PLANT_SP_MATL,VALID_FROM_SP,AUTOM_PO,GR_PROCES_TIME,QUOTA_ARR_USAG,SOURCE_LIST,MRP_GROUP,ABC_INDIC,MRP_TYPE,REORDER_POINT,MRP_CTRL,LOT_SIZE,MIN_LOT_SIZE,MAX_LOT_SIZE,MAX_STK_LEVEL,PROCUR_TYPE,SPECIAL_PROCUR,PROD_STOR_LOC,PLN_DELIV_TIME,SAFETY_STOCK,SELEC_METHOD,COMP_SCRAP,INDIV_COLL,REPETIT_MFG,REM_PROFILE,VER_INDICATOR,UNIT_ISSUE,CC_PHYS_INV,CC_FIXED,TIME_UNIT,STK_DETERM_GRP,POST_INSP_STK,QM_MAT_AUTH,QM_CTRL_KEY,CERTIF_TYPE,PROFIT_CENTER,CO_PRODUCT,VALUAT_AREA,VALUAT_CLASS,STAND_PRICE,PRICE_UNIT,ML_ACT,WITH_QTY_STRUC,ORIGIN_GROUP,PLANNED_PRICE,PRICE_CTRL,MOV_PRICE,PREV_PLN_PRICE,PRICE_DETERM,STORAGE_BIN from zcpimmi0040 where ID_INTERFACE = ${INTERFACE_ID} and PLANT = '4180'" />
+				<container-property reference="weightScaleTroRallyService" name="rallyService" />
+				<property name="countryCode" value="BR" />
+				<property name="companyCode" value="4101" />
+				<property name="targetSys" value="BALANCATRO" />
+				<property name="sourceSys" value="SAP" />
+                <property name="interfaceCode" value="MMI0040"/>
+            </properties>
+        </mule-descriptor>
+        <mule-descriptor name="MMI0040_WEIGHT_SCALE_CON"
+			implementation="com.pdm.interfaces.components.DBInputOutboundMessageEnvelopeBasedComponent">
+			<inbound-router>
+                <endpoint address="quartz:/MMI0040_WEIGHT_SCALE_CON_TRIGGER">
+                    <properties>
+                        <property name="cronExpression" value="0 45 23 ? * *"/>
+                    </properties>
+                </endpoint>
+                <endpoint address="vm://MMI0040_WEIGHT_SCALE_CON_QUEUE" connector="vmQueue"/>
+            </inbound-router>
+			<outbound-router>
+				<router
+					className="com.pdm.interfaces.ListOfMapsMessageEnvelopeBasedMessageSplitter"
+					transformer="messageEnvelopeExtractorTransformer">
+					<endpoint address="jdbc://MMI0040_WEIGHT_SCALE_OUT"
+						connector="weightScaleConConnector"
+						transformers="messageEnvelopeExtractorTransformer" />
+				</router>
+			</outbound-router>
+			<properties>
+				<property name="controlQuery"
+					value="select MATERIAL_NUMB,PLANT,DESC_MAT_EN,DESC_MAT_PT,DESC_MAT_ES,UNIT_MEASURE,MATERIAL_GROUP,DIVISION,MATERIAL_TYPE,X_PLANT_MATL,VALID_FROM_CR,GROSS_WEIGHT,WEIGHT_UNIT,NEW_WEIGHT,VOLUME,VOLUME_UNIT,SIZE_DIMENSION,EAN_UPC,EAN_CATEGORY,MATL_GRP_PACK,PROD_HIERARCHY,TRANS_GRP,BATCH_MANAG,MIN_REM_SHELF,TOTAL_SHELF,QM_PROC_ACTIVE,MAT_FREIG_GRP,AVAILAB_CHECK,SETUP_TIME,PROC_TIME,LOADINGGRP,BASE_QTY,COMM_IMP_CODE,EXP_IMP_GRP,PRODCOM_NO,CONTROL_CODE,COUNTRY_ORIGIN,REGION_ORIGIN,CAP_PROD_LIST,CAP_PROD_GROUP,EXEMP_CERT,EXEMP_CERT_NO,ISS_DATE_EX_CE,MAT_CFOP_CATEG,PURCH_GROUP,PLANT_SP_MATL,VALID_FROM_SP,AUTOM_PO,GR_PROCES_TIME,QUOTA_ARR_USAG,SOURCE_LIST,MRP_GROUP,ABC_INDIC,MRP_TYPE,REORDER_POINT,MRP_CTRL,LOT_SIZE,MIN_LOT_SIZE,MAX_LOT_SIZE,MAX_STK_LEVEL,PROCUR_TYPE,SPECIAL_PROCUR,PROD_STOR_LOC,PLN_DELIV_TIME,SAFETY_STOCK,SELEC_METHOD,COMP_SCRAP,INDIV_COLL,REPETIT_MFG,REM_PROFILE,VER_INDICATOR,UNIT_ISSUE,CC_PHYS_INV,CC_FIXED,TIME_UNIT,STK_DETERM_GRP,POST_INSP_STK,QM_MAT_AUTH,QM_CTRL_KEY,CERTIF_TYPE,PROFIT_CENTER,CO_PRODUCT,VALUAT_AREA,VALUAT_CLASS,STAND_PRICE,PRICE_UNIT,ML_ACT,WITH_QTY_STRUC,ORIGIN_GROUP,PLANNED_PRICE,PRICE_CTRL,MOV_PRICE,PREV_PLN_PRICE,PRICE_DETERM,STORAGE_BIN from zcpimmi0040 where ID_INTERFACE = ${INTERFACE_ID} and PLANT = '4160'" />
+				<container-property reference="weightScaleTroRallyService" name="rallyService" />
+				<property name="countryCode" value="BR" />
+				<property name="companyCode" value="4101" />
+				<property name="targetSys" value="BALANCACON" />
+				<property name="sourceSys" value="SAP" />
+                <property name="interfaceCode" value="MMI0040"/>
+            </properties>
+        </mule-descriptor>
+		<mule-descriptor name="MMI0100_WEIGHT_SCALE_MOG"
+			implementation="com.pdm.interfaces.components.DBInputOutboundMessageEnvelopeBasedComponent">
+			<inbound-router>
+                <endpoint address="quartz:/MMI0100_WEIGHT_SCALE_MOG_TRIGGER">
+                    <properties>
+                        <property name="cronExpression" value="0 30 00/13 ? * *"/>
+                    </properties>
+                </endpoint>
+                <endpoint address="vm://MMI0100_WEIGHT_SCALE_MOG_QUEUE" connector="vmQueue"/>
+            </inbound-router>
+			<outbound-router>
+				<router
+					className="com.pdm.interfaces.ListOfMapsMessageEnvelopeBasedMessageSplitter"
+					transformer="messageEnvelopeExtractorTransformer">
+					<endpoint address="jdbc://MMI0100_WEIGHT_SCALE_OUT"
+						connector="weightScaleMogConnector"
+						transformers="messageEnvelopeExtractorTransformer" />
+				</router>
+			</outbound-router>
+			<properties>
+				<property name="controlQuery"
+					value="select d.LGORT, d.MEINS, d.BPRME, h.EKORG, d.EBELN, d.EBELP, d.TXZ01, d.MATNR, h.BUKRS, d.MENGE, h.LIFNR, d.WERKS from ZCPIMMI0100_DETAIL d, ZCPIMMI0100_HEADER h where d.ID_INTERFACE = ${INTERFACE_ID} and d.ID_INTERFACE = h.ID_INTERFACE and d.EBELN = h.EBELN and d.WERKS = '4120'" />
+				<container-property reference="weightScaleMogRallyService"
+					name="rallyService" />
+				<property name="countryCode" value="BR" />
+				<property name="companyCode" value="4101" />
+                <property name="targetSys" value="BALANCAMOG"/>
+                <property name="sourceSys" value="SAP"/>
+                <property name="interfaceCode" value="MMI0100"/>
+            </properties>
+		</mule-descriptor>
+        <mule-descriptor name="MMI0100_WEIGHT_SCALE_CAB"
+			implementation="com.pdm.interfaces.components.DBInputOutboundMessageEnvelopeBasedComponent">
+			<inbound-router>
+                <endpoint address="quartz:/MMI0100_WEIGHT_SCALE_CAB_TRIGGER">
+                    <properties>
+                        <property name="cronExpression" value="0 35 00/13 ? * *"/>
+                    </properties>
+                </endpoint>
+                <endpoint address="vm://MMI0100_WEIGHT_SCALE_CAB_QUEUE" connector="vmQueue"/>
+            </inbound-router>
+			<outbound-router>
+				<router
+					className="com.pdm.interfaces.ListOfMapsMessageEnvelopeBasedMessageSplitter"
+					transformer="messageEnvelopeExtractorTransformer">
+					<endpoint address="jdbc://MMI0100_WEIGHT_SCALE_OUT"
+						connector="weightScaleCabConnector"
+						transformers="messageEnvelopeExtractorTransformer" />
+				</router>
+			</outbound-router>
+			<properties>
+				<property name="controlQuery"
+					value="select d.LGORT, d.MEINS, d.BPRME, h.EKORG, d.EBELN, d.EBELP, d.TXZ01, d.MATNR, h.BUKRS, d.MENGE, h.LIFNR, d.WERKS from ZCPIMMI0100_DETAIL d, ZCPIMMI0100_HEADER h where d.ID_INTERFACE = ${INTERFACE_ID} and d.ID_INTERFACE = h.ID_INTERFACE and d.EBELN = h.EBELN and d.WERKS = '4130'" />
+				<container-property reference="weightScaleCabRallyService"
+					name="rallyService" />
+				<property name="countryCode" value="BR" />
+				<property name="companyCode" value="4101" />
+                <property name="targetSys" value="BALANZACAB"/>
+                <property name="sourceSys" value="SAP"/>
+                <property name="interfaceCode" value="MMI0100"/>
+            </properties>
+		</mule-descriptor>
+        <mule-descriptor name="MMI0100_WEIGHT_SCALE_BAL"
+			implementation="com.pdm.interfaces.components.DBInputOutboundMessageEnvelopeBasedComponent">
+			<inbound-router>
+                <endpoint address="quartz:/MMI0100_WEIGHT_SCALE_BAL_TRIGGER">
+                    <properties>
+                        <property name="cronExpression" value="0 40 00/13 ? * *"/>
+                    </properties>
+                </endpoint>
+                <endpoint address="vm://MMI0100_WEIGHT_SCALE_BAL_QUEUE" connector="vmQueue"/>
+            </inbound-router>
+			<outbound-router>
+				<router
+					className="com.pdm.interfaces.ListOfMapsMessageEnvelopeBasedMessageSplitter"
+					transformer="messageEnvelopeExtractorTransformer">
+					<endpoint address="jdbc://MMI0100_WEIGHT_SCALE_OUT"
+						connector="weightScaleBalConnector"
+						transformers="messageEnvelopeExtractorTransformer" />
+				</router>
+			</outbound-router>
+			<properties>
+				<property name="controlQuery"
+					value="select d.LGORT, d.MEINS, d.BPRME, h.EKORG, d.EBELN, d.EBELP, d.TXZ01, d.MATNR, h.BUKRS, d.MENGE, h.LIFNR, d.WERKS from ZCPIMMI0100_DETAIL d, ZCPIMMI0100_HEADER h where d.ID_INTERFACE = ${INTERFACE_ID} and d.ID_INTERFACE = h.ID_INTERFACE and d.EBELN = h.EBELN and d.WERKS = '4140'" />
+				<container-property reference="weightScaleBalRallyService"
+					name="rallyService" />
+				<property name="countryCode" value="BR" />
+				<property name="companyCode" value="4101" />
+                <property name="targetSys" value="BALANCABAL"/>
+                <property name="sourceSys" value="SAP"/>
+                <property name="interfaceCode" value="MMI0100"/>
+            </properties>
+		</mule-descriptor>
+        <mule-descriptor name="MMI0100_WEIGHT_SCALE_TRO"
+			implementation="com.pdm.interfaces.components.DBInputOutboundMessageEnvelopeBasedComponent">
+			<inbound-router>
+                <endpoint address="quartz:/MMI0100_WEIGHT_SCALE_TRO_TRIGGER">
+                    <properties>
+                        <property name="cronExpression" value="0 41 00/13 ? * *"/>
+                    </properties>
+                </endpoint>
+                <endpoint address="vm://MMI0100_WEIGHT_SCALE_TRO_QUEUE" connector="vmQueue"/>
+            </inbound-router>
+			<outbound-router>
+				<router
+					className="com.pdm.interfaces.ListOfMapsMessageEnvelopeBasedMessageSplitter"
+					transformer="messageEnvelopeExtractorTransformer">
+					<endpoint address="jdbc://MMI0100_WEIGHT_SCALE_OUT"
+						connector="weightScaleTroConnector"
+						transformers="messageEnvelopeExtractorTransformer" />
+				</router>
+			</outbound-router>
+			<properties>
+				<property name="controlQuery"
+					value="select d.LGORT, d.MEINS, d.BPRME, h.EKORG, d.EBELN, d.EBELP, d.TXZ01, d.MATNR, h.BUKRS, d.MENGE, h.LIFNR, d.WERKS from ZCPIMMI0100_DETAIL d, ZCPIMMI0100_HEADER h where d.ID_INTERFACE = ${INTERFACE_ID} and d.ID_INTERFACE = h.ID_INTERFACE and d.EBELN = h.EBELN and d.WERKS = '4180'" />
+				<container-property reference="weightScaleTroRallyService"
+					name="rallyService" />
+				<property name="countryCode" value="BR" />
+				<property name="companyCode" value="4101" />
+                <property name="targetSys" value="BALANCATRO"/>
+                <property name="sourceSys" value="SAP"/>
+                <property name="interfaceCode" value="MMI0100"/>
+            </properties>
+		</mule-descriptor>
+        <mule-descriptor name="MMI0100_WEIGHT_SCALE_CON"
+			implementation="com.pdm.interfaces.components.DBInputOutboundMessageEnvelopeBasedComponent">
+			<inbound-router>
+                <endpoint address="quartz:/MMI0100_WEIGHT_SCALE_CON_TRIGGER">
+                    <properties>
+                        <property name="cronExpression" value="0 44 00/13 ? * *"/>
+                    </properties>
+                </endpoint>
+                <endpoint address="vm://MMI0100_WEIGHT_SCALE_CON_QUEUE" connector="vmQueue"/>
+            </inbound-router>
+			<outbound-router>
+				<router
+					className="com.pdm.interfaces.ListOfMapsMessageEnvelopeBasedMessageSplitter"
+					transformer="messageEnvelopeExtractorTransformer">
+					<endpoint address="jdbc://MMI0100_WEIGHT_SCALE_OUT"
+						connector="weightScaleConConnector"
+						transformers="messageEnvelopeExtractorTransformer" />
+				</router>
+			</outbound-router>
+			<properties>
+				<property name="controlQuery"
+					value="select d.LGORT, d.MEINS, d.BPRME, h.EKORG, d.EBELN, d.EBELP, d.TXZ01, d.MATNR, h.BUKRS, d.MENGE, h.LIFNR, d.WERKS from ZCPIMMI0100_DETAIL d, ZCPIMMI0100_HEADER h where d.ID_INTERFACE = ${INTERFACE_ID} and d.ID_INTERFACE = h.ID_INTERFACE and d.EBELN = h.EBELN and d.WERKS = '4160'" />
+				<container-property reference="weightScaleConRallyService"
+					name="rallyService" />
+				<property name="countryCode" value="BR" />
+				<property name="companyCode" value="4101" />
+                <property name="targetSys" value="BALANCACON"/>
+                <property name="sourceSys" value="SAP"/>
+                <property name="interfaceCode" value="MMI0100"/>
+            </properties>
+		</mule-descriptor>
+		<mule-descriptor name="MMI0090_WEIGHT_SCALE_MOG"
+			implementation="com.pdm.interfaces.components.DBInputOutboundMessageEnvelopeBasedComponent">
+			<inbound-router>
+                <endpoint address="quartz:/MMI0090_WEIGHT_SCALE_MOG_TRIGGER">
+                    <properties>
+                        <property name="cronExpression" value="0 10 1-23 ? * *"/>
+                    </properties>
+                </endpoint>
+                <endpoint address="vm://MMI0090_WEIGHT_SCALE_MOG_QUEUE" connector="vmQueue"/>
+            </inbound-router>
+			<outbound-router>
+				<router
+					className="com.pdm.interfaces.ListOfMapsMessageEnvelopeBasedMessageSplitter"
+					transformer="messageEnvelopeExtractorTransformer">
+					<endpoint address="jdbc://MMI0090_WEIGHT_SCALE_OUT"
+						connector="weightScaleMogConnector"
+						transformers="messageEnvelopeExtractorTransformer" />
+				</router>
+			</outbound-router>
+			<properties>
+				<property name="controlQuery"
+					value="select LIFNR, COUNTER, BUKRS, EKORG, LAND1, NAME1, NAME2, NAME3, NAME4, ORT01, ORT02, PFACH, PSTL2, PSTLZ, REGIO, STRAS, ADRNR, BEGRU, BRSCH, DATLT, KUNNR, LNRZA, SPRAS, STCD1, STCD2, TELF1, TELF2, TELFX, TELTX, TELX1, XZEMP, VBUND, STCEG, STKZN, QSSYS, TXJCD, SCACD, LZONE, FITYP, STCDT, ACTSS, STCD3, STCD4, IPISP, TAXBS, STGDL, LFURL, FISKU, STENR, ERDAT, ERNAM, ZUAWA, AKONT, BEGRU2, VZSKZ, ZWELS, ZAHLS, ZTERM, EIKTO, KVERM, BUSAB, LNRZE, LNRZB, XDEZV, WEBTR, KULTG, REPRF, TOGRU, HBKID, XPORE, MINDK, ALTKN, ZGRUP, QSREC, QLAND, XEDIP, FRGRP, TOGRR, TLFXS, INTAD, TLFNS, ERDAT2, ERNAM2, LFABC, WAERS, VERKF, TELF12, MINBW, ZTERM2, INCO1, INCO2, WEBRE, KZABS, KALSK, KZAUT, EXPVZ, ZOLLA, MEPRF, EKGRP, XERSY, PLIFZ, BOIND, BLIND, KZRET, SKRIT, BSTAE, RDPRF, MEGRU, VENSL, BOPNR, EIKTO2, LEBRE, BOLRE, UMSAE, MABER, MAHNA, MANSP, MADAT, MAHNS, LFRMA, GMVDT, BANKS, BANKL, BANKN, BKONT, BVTYP, XEZER, BKREF, KOINH, WITHT, WT_SUBJCT, QSREC2, WT_WTSTCD, WT_WITHCD, WT_EXNR from zcpimmi0090 where ID_INTERFACE = ${INTERFACE_ID} order by LIFNR" />
+				<container-property reference="weightScaleMogRallyService"
+					name="rallyService" />
+				<property name="preOutboundRouterTransformers"
+					value="MMI0090OrganizationFilter" />
+                <property name="targetSys" value="BALANCAMOG"/>
+                <property name="sourceSys" value="SAP"/>
+                <property name="interfaceCode" value="MMI0090"/>
+                <property name="countryCode" value="BR" />
+				<property name="companyCode" value="4101" />
+			</properties>
+		</mule-descriptor>
+        <mule-descriptor name="MMI0090_WEIGHT_SCALE_CAB"
+			implementation="com.pdm.interfaces.components.DBInputOutboundMessageEnvelopeBasedComponent">
+			<inbound-router>
+                <endpoint address="quartz:/MMI0090_WEIGHT_SCALE_CAB_TRIGGER">
+                    <properties>
+                        <property name="cronExpression" value="0 11 1-23 ? * *"/>
+                    </properties>
+                </endpoint>
+                <endpoint address="vm://MMI0090_WEIGHT_SCALE_CAB_QUEUE" connector="vmQueue"/>
+            </inbound-router>
+			<outbound-router>
+				<router
+					className="com.pdm.interfaces.ListOfMapsMessageEnvelopeBasedMessageSplitter"
+					transformer="messageEnvelopeExtractorTransformer">
+					<endpoint address="jdbc://MMI0090_WEIGHT_SCALE_OUT"
+						connector="weightScaleCabConnector"
+						transformers="messageEnvelopeExtractorTransformer" />
+				</router>
+			</outbound-router>
+			<properties>
+				<property name="controlQuery"
+					value="select LIFNR, COUNTER, BUKRS, EKORG, LAND1, NAME1, NAME2, NAME3, NAME4, ORT01, ORT02, PFACH, PSTL2, PSTLZ, REGIO, STRAS, ADRNR, BEGRU, BRSCH, DATLT, KUNNR, LNRZA, SPRAS, STCD1, STCD2, TELF1, TELF2, TELFX, TELTX, TELX1, XZEMP, VBUND, STCEG, STKZN, QSSYS, TXJCD, SCACD, LZONE, FITYP, STCDT, ACTSS, STCD3, STCD4, IPISP, TAXBS, STGDL, LFURL, FISKU, STENR, ERDAT, ERNAM, ZUAWA, AKONT, BEGRU2, VZSKZ, ZWELS, ZAHLS, ZTERM, EIKTO, KVERM, BUSAB, LNRZE, LNRZB, XDEZV, WEBTR, KULTG, REPRF, TOGRU, HBKID, XPORE, MINDK, ALTKN, ZGRUP, QSREC, QLAND, XEDIP, FRGRP, TOGRR, TLFXS, INTAD, TLFNS, ERDAT2, ERNAM2, LFABC, WAERS, VERKF, TELF12, MINBW, ZTERM2, INCO1, INCO2, WEBRE, KZABS, KALSK, KZAUT, EXPVZ, ZOLLA, MEPRF, EKGRP, XERSY, PLIFZ, BOIND, BLIND, KZRET, SKRIT, BSTAE, RDPRF, MEGRU, VENSL, BOPNR, EIKTO2, LEBRE, BOLRE, UMSAE, MABER, MAHNA, MANSP, MADAT, MAHNS, LFRMA, GMVDT, BANKS, BANKL, BANKN, BKONT, BVTYP, XEZER, BKREF, KOINH, WITHT, WT_SUBJCT, QSREC2, WT_WTSTCD, WT_WITHCD, WT_EXNR from zcpimmi0090 where ID_INTERFACE = ${INTERFACE_ID} order by LIFNR" />
+				<container-property reference="weightScaleCabRallyService"
+					name="rallyService" />
+				<property name="preOutboundRouterTransformers"
+					value="MMI0090OrganizationFilter" />
+                <property name="targetSys" value="BALANCACAB"/>
+                <property name="sourceSys" value="SAP"/>
+                <property name="interfaceCode" value="MMI0090"/>
+                <property name="countryCode" value="BR" />
+				<property name="companyCode" value="4101" />
+			</properties>
+		</mule-descriptor>
+        <mule-descriptor name="MMI0090_WEIGHT_SCALE_BAL"
+			implementation="com.pdm.interfaces.components.DBInputOutboundMessageEnvelopeBasedComponent">
+			<inbound-router>
+                <endpoint address="quartz:/MMI0090_WEIGHT_SCALE_BAL_TRIGGER">
+                    <properties>
+                        <property name="cronExpression" value="0 12 1-23 ? * *"/>
+                    </properties>
+                </endpoint>
+                <endpoint address="vm://MMI0090_WEIGHT_SCALE_BAL_QUEUE" connector="vmQueue"/>
+            </inbound-router>
+			<outbound-router>
+				<router
+					className="com.pdm.interfaces.ListOfMapsMessageEnvelopeBasedMessageSplitter"
+					transformer="messageEnvelopeExtractorTransformer">
+					<endpoint address="jdbc://MMI0090_WEIGHT_SCALE_OUT"
+						connector="weightScaleBalConnector"
+						transformers="messageEnvelopeExtractorTransformer" />
+				</router>
+			</outbound-router>
+			<properties>
+				<property name="controlQuery"
+					value="select LIFNR, COUNTER, BUKRS, EKORG, LAND1, NAME1, NAME2, NAME3, NAME4, ORT01, ORT02, PFACH, PSTL2, PSTLZ, REGIO, STRAS, ADRNR, BEGRU, BRSCH, DATLT, KUNNR, LNRZA, SPRAS, STCD1, STCD2, TELF1, TELF2, TELFX, TELTX, TELX1, XZEMP, VBUND, STCEG, STKZN, QSSYS, TXJCD, SCACD, LZONE, FITYP, STCDT, ACTSS, STCD3, STCD4, IPISP, TAXBS, STGDL, LFURL, FISKU, STENR, ERDAT, ERNAM, ZUAWA, AKONT, BEGRU2, VZSKZ, ZWELS, ZAHLS, ZTERM, EIKTO, KVERM, BUSAB, LNRZE, LNRZB, XDEZV, WEBTR, KULTG, REPRF, TOGRU, HBKID, XPORE, MINDK, ALTKN, ZGRUP, QSREC, QLAND, XEDIP, FRGRP, TOGRR, TLFXS, INTAD, TLFNS, ERDAT2, ERNAM2, LFABC, WAERS, VERKF, TELF12, MINBW, ZTERM2, INCO1, INCO2, WEBRE, KZABS, KALSK, KZAUT, EXPVZ, ZOLLA, MEPRF, EKGRP, XERSY, PLIFZ, BOIND, BLIND, KZRET, SKRIT, BSTAE, RDPRF, MEGRU, VENSL, BOPNR, EIKTO2, LEBRE, BOLRE, UMSAE, MABER, MAHNA, MANSP, MADAT, MAHNS, LFRMA, GMVDT, BANKS, BANKL, BANKN, BKONT, BVTYP, XEZER, BKREF, KOINH, WITHT, WT_SUBJCT, QSREC2, WT_WTSTCD, WT_WITHCD, WT_EXNR from zcpimmi0090 where ID_INTERFACE = ${INTERFACE_ID} order by LIFNR" />
+				<container-property reference="weightScaleBalRallyService"
+					name="rallyService" />
+				<property name="preOutboundRouterTransformers"
+					value="MMI0090OrganizationFilter" />
+                <property name="targetSys" value="BALANCABAL"/>
+                <property name="sourceSys" value="SAP"/>
+                <property name="interfaceCode" value="MMI0090"/>
+                <property name="countryCode" value="BR" />
+				<property name="companyCode" value="4101" />
+			</properties>
+		</mule-descriptor>
+        <mule-descriptor name="MMI0090_WEIGHT_SCALE_TRO"
+			implementation="com.pdm.interfaces.components.DBInputOutboundMessageEnvelopeBasedComponent">
+			<inbound-router>
+                <endpoint address="quartz:/MMI0090_WEIGHT_SCALE_TRO_TRIGGER">
+                    <properties>
+                        <property name="cronExpression" value="0 13 1-23 ? * *"/>
+                    </properties>
+                </endpoint>
+                <endpoint address="vm://MMI0090_WEIGHT_SCALE_TRO_QUEUE" connector="vmQueue"/>
+            </inbound-router>
+			<outbound-router>
+				<router
+					className="com.pdm.interfaces.ListOfMapsMessageEnvelopeBasedMessageSplitter"
+					transformer="messageEnvelopeExtractorTransformer">
+					<endpoint address="jdbc://MMI0090_WEIGHT_SCALE_OUT"
+						connector="weightScaleTroConnector"
+						transformers="messageEnvelopeExtractorTransformer" />
+				</router>
+			</outbound-router>
+			<properties>
+				<property name="controlQuery"
+					value="select LIFNR, COUNTER, BUKRS, EKORG, LAND1, NAME1, NAME2, NAME3, NAME4, ORT01, ORT02, PFACH, PSTL2, PSTLZ, REGIO, STRAS, ADRNR, BEGRU, BRSCH, DATLT, KUNNR, LNRZA, SPRAS, STCD1, STCD2, TELF1, TELF2, TELFX, TELTX, TELX1, XZEMP, VBUND, STCEG, STKZN, QSSYS, TXJCD, SCACD, LZONE, FITYP, STCDT, ACTSS, STCD3, STCD4, IPISP, TAXBS, STGDL, LFURL, FISKU, STENR, ERDAT, ERNAM, ZUAWA, AKONT, BEGRU2, VZSKZ, ZWELS, ZAHLS, ZTERM, EIKTO, KVERM, BUSAB, LNRZE, LNRZB, XDEZV, WEBTR, KULTG, REPRF, TOGRU, HBKID, XPORE, MINDK, ALTKN, ZGRUP, QSREC, QLAND, XEDIP, FRGRP, TOGRR, TLFXS, INTAD, TLFNS, ERDAT2, ERNAM2, LFABC, WAERS, VERKF, TELF12, MINBW, ZTERM2, INCO1, INCO2, WEBRE, KZABS, KALSK, KZAUT, EXPVZ, ZOLLA, MEPRF, EKGRP, XERSY, PLIFZ, BOIND, BLIND, KZRET, SKRIT, BSTAE, RDPRF, MEGRU, VENSL, BOPNR, EIKTO2, LEBRE, BOLRE, UMSAE, MABER, MAHNA, MANSP, MADAT, MAHNS, LFRMA, GMVDT, BANKS, BANKL, BANKN, BKONT, BVTYP, XEZER, BKREF, KOINH, WITHT, WT_SUBJCT, QSREC2, WT_WTSTCD, WT_WITHCD, WT_EXNR from zcpimmi0090 where ID_INTERFACE = ${INTERFACE_ID} order by LIFNR" />
+				<container-property reference="weightScaleTroRallyService"
+					name="rallyService" />
+				<property name="preOutboundRouterTransformers"
+					value="MMI0090OrganizationFilter" />
+                <property name="targetSys" value="BALANCATRO"/>
+                <property name="sourceSys" value="SAP"/>
+                <property name="interfaceCode" value="MMI0090"/>
+                <property name="countryCode" value="BR" />
+				<property name="companyCode" value="4101" />
+			</properties>
+		</mule-descriptor>
+        <mule-descriptor name="MMI0090_WEIGHT_SCALE_CON"
+			implementation="com.pdm.interfaces.components.DBInputOutboundMessageEnvelopeBasedComponent">
+			<inbound-router>
+                <endpoint address="quartz:/MMI0090_WEIGHT_SCALE_CON_TRIGGER">
+                    <properties>
+                        <property name="cronExpression" value="0 14 1-23 ? * *"/>
+                    </properties>
+                </endpoint>
+                <endpoint address="vm://MMI0090_WEIGHT_SCALE_CON_QUEUE" connector="vmQueue"/>
+            </inbound-router>
+			<outbound-router>
+				<router
+					className="com.pdm.interfaces.ListOfMapsMessageEnvelopeBasedMessageSplitter"
+					transformer="messageEnvelopeExtractorTransformer">
+					<endpoint address="jdbc://MMI0090_WEIGHT_SCALE_OUT"
+						connector="weightScaleConConnector"
+						transformers="messageEnvelopeExtractorTransformer" />
+				</router>
+			</outbound-router>
+			<properties>
+				<property name="controlQuery"
+					value="select LIFNR, COUNTER, BUKRS, EKORG, LAND1, NAME1, NAME2, NAME3, NAME4, ORT01, ORT02, PFACH, PSTL2, PSTLZ, REGIO, STRAS, ADRNR, BEGRU, BRSCH, DATLT, KUNNR, LNRZA, SPRAS, STCD1, STCD2, TELF1, TELF2, TELFX, TELTX, TELX1, XZEMP, VBUND, STCEG, STKZN, QSSYS, TXJCD, SCACD, LZONE, FITYP, STCDT, ACTSS, STCD3, STCD4, IPISP, TAXBS, STGDL, LFURL, FISKU, STENR, ERDAT, ERNAM, ZUAWA, AKONT, BEGRU2, VZSKZ, ZWELS, ZAHLS, ZTERM, EIKTO, KVERM, BUSAB, LNRZE, LNRZB, XDEZV, WEBTR, KULTG, REPRF, TOGRU, HBKID, XPORE, MINDK, ALTKN, ZGRUP, QSREC, QLAND, XEDIP, FRGRP, TOGRR, TLFXS, INTAD, TLFNS, ERDAT2, ERNAM2, LFABC, WAERS, VERKF, TELF12, MINBW, ZTERM2, INCO1, INCO2, WEBRE, KZABS, KALSK, KZAUT, EXPVZ, ZOLLA, MEPRF, EKGRP, XERSY, PLIFZ, BOIND, BLIND, KZRET, SKRIT, BSTAE, RDPRF, MEGRU, VENSL, BOPNR, EIKTO2, LEBRE, BOLRE, UMSAE, MABER, MAHNA, MANSP, MADAT, MAHNS, LFRMA, GMVDT, BANKS, BANKL, BANKN, BKONT, BVTYP, XEZER, BKREF, KOINH, WITHT, WT_SUBJCT, QSREC2, WT_WTSTCD, WT_WITHCD, WT_EXNR from zcpimmi0090 where ID_INTERFACE = ${INTERFACE_ID} order by LIFNR" />
+				<container-property reference="weightScaleConRallyService"
+					name="rallyService" />
+				<property name="preOutboundRouterTransformers"
+					value="MMI0090OrganizationFilter" />
+                <property name="targetSys" value="BALANCACON"/>
+                <property name="sourceSys" value="SAP"/>
+                <property name="interfaceCode" value="MMI0090"/>
+                <property name="countryCode" value="BR" />
+				<property name="companyCode" value="4101" />
+			</properties>
+		</mule-descriptor>
+		<mule-descriptor name="MMI0010_WEIGHT_SCALE_MOG"
+			implementation="com.pdm.interfaces.components.DBInputInboundMessageEnvelopeBasedComponent">
+			<inbound-router>
+				<endpoint
+					address="jdbc://MMI0010_WEIGHT_SCALE_MOG_TRIGGER"
+					connector="weightScaleMogConnector">
+					<properties>
+						<property name="pollingFrequency" value="9500" />
+					</properties>
+				</endpoint>
+			</inbound-router>
+			<outbound-router>
+				<router
+					className="com.pdm.interfaces.ListOfMapsMessageEnvelopeBasedMessageSplitter"
+					transformer="messageEnvelopeExtractorTransformer">
+					<endpoint address="jdbc://MMI0010_WEIGHT_SCALE_OUT"
+						connector="controlConnector"
+						transformers="messageEnvelopeExtractorTransformer" />
+				</router>
+			</outbound-router>
+			<properties>
+				<property name="legacyQuery"
+					value="select MATERIAL, PLANT, STORAGE_LOC, PURCHASE_ORDER, DELIVERY, BATCH, MOV_TYPE, QUANTITY, UNIT, PRODUCTION_DT, EXPIRATION_DT, DOCUMENT_DT, COST_CENTER, REC_STORAGE_LOC, QTY_DEL, BASE_UOM, BILL_OF_LADING, CODIGOIVA, ISSUETYPE, NUMEROALEATORIO, DIGITOVERIFICADOR, BASEDEIMPUESTO, TYPE , PROTOCOLO, DOCNF_DT from sap_recepcion where PROCESSED='N' and ORGANIZATION_CODE='4120' and STORAGE_LOC='${TRIGGER_STORAGE_LOC}' and DELIVERY='${TRIGGER_DELIVERY}'" />
+				<property name="legacyQueryACK"
+					value="update sap_recepcion set PROCESSED='S' where ORGANIZATION_CODE='4120' and STORAGE_LOC='${TRIGGER_STORAGE_LOC}' and DELIVERY='${TRIGGER_DELIVERY}'" />
+				<container-property reference="weightScaleMogRallyService"
+					name="rallyService" />
+				<property name="sourceSys" value="BALANCAMOG" />
+				<property name="interfaceCode" value="MMI0010" />
+				<property name="countryCode" value="BR" />
+				<property name="companyCode" value="4101" />
+			</properties>
+		</mule-descriptor>
+		<mule-descriptor name="MMI0010_WEIGHT_SCALE_CAB"
+			implementation="com.pdm.interfaces.components.DBInputInboundMessageEnvelopeBasedComponent">
+			<inbound-router>
+				<endpoint
+					address="jdbc://MMI0010_WEIGHT_SCALE_CAB_TRIGGER"
+					connector="weightScaleCabConnector">
+					<properties>
+						<property name="pollingFrequency" value="10000" />
+					</properties>
+				</endpoint>
+			</inbound-router>
+			<outbound-router>
+				<router
+					className="com.pdm.interfaces.ListOfMapsMessageEnvelopeBasedMessageSplitter"
+					transformer="messageEnvelopeExtractorTransformer">
+					<endpoint address="jdbc://MMI0010_WEIGHT_SCALE_OUT"
+						connector="controlConnector"
+						transformers="messageEnvelopeExtractorTransformer" />
+				</router>
+			</outbound-router>
+			<properties>
+				<property name="legacyQuery"
+					value="select MATERIAL, PLANT, STORAGE_LOC, PURCHASE_ORDER, DELIVERY, BATCH, MOV_TYPE, QUANTITY, UNIT, PRODUCTION_DT, EXPIRATION_DT, DOCUMENT_DT, COST_CENTER, REC_STORAGE_LOC, QTY_DEL, BASE_UOM, BILL_OF_LADING, CODIGOIVA, ISSUETYPE, NUMEROALEATORIO, DIGITOVERIFICADOR, BASEDEIMPUESTO, TYPE , PROTOCOLO, DOCNF_DT from sap_recepcion where PROCESSED='N' and ORGANIZATION_CODE='4130' and STORAGE_LOC='${TRIGGER_STORAGE_LOC}' and DELIVERY='${TRIGGER_DELIVERY}'" />
+				<property name="legacyQueryACK"
+					value="update sap_recepcion set PROCESSED='S' where ORGANIZATION_CODE='4130' and STORAGE_LOC='${TRIGGER_STORAGE_LOC}' and DELIVERY='${TRIGGER_DELIVERY}'" />
+				<container-property reference="weightScaleCabRallyService"
+					name="rallyService" />
+				<property name="sourceSys" value="BALANCACAB" />
+				<property name="interfaceCode" value="MMI0010" />
+				<property name="countryCode" value="BR" />
+				<property name="companyCode" value="4101" />
+			</properties>
+		</mule-descriptor>
+		<mule-descriptor name="MMI0010_WEIGHT_SCALE_BAL"
+			implementation="com.pdm.interfaces.components.DBInputInboundMessageEnvelopeBasedComponent">
+			<inbound-router>
+				<endpoint
+					address="jdbc://MMI0010_WEIGHT_SCALE_BAL_TRIGGER"
+					connector="weightScaleBalConnector">
+					<properties>
+						<property name="pollingFrequency" value="10000" />
+					</properties>
+				</endpoint>
+			</inbound-router>
+			<outbound-router>
+				<router
+					className="com.pdm.interfaces.ListOfMapsMessageEnvelopeBasedMessageSplitter"
+					transformer="messageEnvelopeExtractorTransformer">
+					<endpoint address="jdbc://MMI0010_WEIGHT_SCALE_OUT"
+						connector="controlConnector"
+						transformers="messageEnvelopeExtractorTransformer" />
+				</router>
+			</outbound-router>
+			<properties>
+				<property name="legacyQuery"
+					value="select MATERIAL, PLANT, STORAGE_LOC, PURCHASE_ORDER, DELIVERY, BATCH, MOV_TYPE, QUANTITY, UNIT, PRODUCTION_DT, EXPIRATION_DT, DOCUMENT_DT, COST_CENTER, REC_STORAGE_LOC, QTY_DEL, BASE_UOM, BILL_OF_LADING, CODIGOIVA, ISSUETYPE, NUMEROALEATORIO, DIGITOVERIFICADOR, BASEDEIMPUESTO, TYPE , PROTOCOLO, DOCNF_DT from sap_recepcion where PROCESSED='N' and ORGANIZATION_CODE='4140' and STORAGE_LOC='${TRIGGER_STORAGE_LOC}' and DELIVERY='${TRIGGER_DELIVERY}'" />
+				<property name="legacyQueryACK"
+					value="update sap_recepcion set PROCESSED='S' where ORGANIZATION_CODE='4140' and STORAGE_LOC='${TRIGGER_STORAGE_LOC}' and DELIVERY='${TRIGGER_DELIVERY}'" />
+				<container-property reference="weightScaleBalRallyService"
+					name="rallyService" />
+				<property name="sourceSys" value="BALANCABAL" />
+				<property name="interfaceCode" value="MMI0010" />
+				<property name="countryCode" value="BR" />
+				<property name="companyCode" value="4101" />
+			</properties>
+		</mule-descriptor>
+		<mule-descriptor name="MMI0010_WEIGHT_SCALE_TRO"
+			implementation="com.pdm.interfaces.components.DBInputInboundMessageEnvelopeBasedComponent">
+			<inbound-router>
+				<endpoint
+					address="jdbc://MMI0010_WEIGHT_SCALE_TRO_TRIGGER"
+					connector="weightScaleTroConnector">
+					<properties>
+						<property name="pollingFrequency" value="10000" />
+					</properties>
+				</endpoint>
+			</inbound-router>
+			<outbound-router>
+				<router
+					className="com.pdm.interfaces.ListOfMapsMessageEnvelopeBasedMessageSplitter"
+					transformer="messageEnvelopeExtractorTransformer">
+					<endpoint address="jdbc://MMI0010_WEIGHT_SCALE_OUT"
+						connector="controlConnector"
+						transformers="messageEnvelopeExtractorTransformer" />
+				</router>
+			</outbound-router>
+			<properties>
+				<property name="legacyQuery"
+					value="select MATERIAL, PLANT, STORAGE_LOC, PURCHASE_ORDER, DELIVERY, BATCH, MOV_TYPE, QUANTITY, UNIT, PRODUCTION_DT, EXPIRATION_DT, DOCUMENT_DT, COST_CENTER, REC_STORAGE_LOC, QTY_DEL, BASE_UOM, BILL_OF_LADING, CODIGOIVA, ISSUETYPE, NUMEROALEATORIO, DIGITOVERIFICADOR, BASEDEIMPUESTO, TYPE , PROTOCOLO, DOCNF_DT from sap_recepcion where PROCESSED='N' and ORGANIZATION_CODE='4180' and STORAGE_LOC='${TRIGGER_STORAGE_LOC}' and DELIVERY='${TRIGGER_DELIVERY}'" />
+				<property name="legacyQueryACK"
+					value="update sap_recepcion set PROCESSED='S' where ORGANIZATION_CODE='4180' and STORAGE_LOC='${TRIGGER_STORAGE_LOC}' and DELIVERY='${TRIGGER_DELIVERY}'" />
+				<container-property reference="weightScaleTroRallyService"
+					name="rallyService" />
+				<property name="sourceSys" value="BALANCATRO" />
+				<property name="interfaceCode" value="MMI0010" />
+				<property name="countryCode" value="BR" />
+				<property name="companyCode" value="4101" />
+			</properties>
+		</mule-descriptor>
+		<mule-descriptor name="MMI0010_WEIGHT_SCALE_CON"
+			implementation="com.pdm.interfaces.components.DBInputInboundMessageEnvelopeBasedComponent">
+			<inbound-router>
+				<endpoint
+					address="jdbc://MMI0010_WEIGHT_SCALE_CON_TRIGGER"
+					connector="weightScaleConConnector">
+					<properties>
+						<property name="pollingFrequency" value="10000" />
+					</properties>
+				</endpoint>
+			</inbound-router>
+			<outbound-router>
+				<router
+					className="com.pdm.interfaces.ListOfMapsMessageEnvelopeBasedMessageSplitter"
+					transformer="messageEnvelopeExtractorTransformer">
+					<endpoint address="jdbc://MMI0010_WEIGHT_SCALE_OUT"
+						connector="controlConnector"
+						transformers="messageEnvelopeExtractorTransformer" />
+				</router>
+			</outbound-router>
+			<properties>
+				<property name="legacyQuery"
+					value="select MATERIAL, PLANT, STORAGE_LOC, PURCHASE_ORDER, DELIVERY, BATCH, MOV_TYPE, QUANTITY, UNIT, PRODUCTION_DT, EXPIRATION_DT, DOCUMENT_DT, COST_CENTER, REC_STORAGE_LOC, QTY_DEL, BASE_UOM, BILL_OF_LADING, CODIGOIVA, ISSUETYPE, NUMEROALEATORIO, DIGITOVERIFICADOR, BASEDEIMPUESTO, TYPE , PROTOCOLO, DOCNF_DT from sap_recepcion where PROCESSED='N' and ORGANIZATION_CODE='4160' and STORAGE_LOC='${TRIGGER_STORAGE_LOC}' and DELIVERY='${TRIGGER_DELIVERY}'" />
+				<property name="legacyQueryACK"
+					value="update sap_recepcion set PROCESSED='S' where ORGANIZATION_CODE='4160' and STORAGE_LOC='${TRIGGER_STORAGE_LOC}' and DELIVERY='${TRIGGER_DELIVERY}'" />
+				<container-property reference="weightScaleConRallyService"
+					name="rallyService" />
+				<property name="sourceSys" value="BALANCACON" />
+				<property name="interfaceCode" value="MMI0010" />
+				<property name="countryCode" value="BR" />
+				<property name="companyCode" value="4101" />
+			</properties>
+		</mule-descriptor>
+		<mule-descriptor name="SDI0070_WEIGHT_SCALE_MOG"
+			implementation="com.pdm.interfaces.components.OutboundMessageEnvelopeBasedComponent">
+			<inbound-router>
+				<endpoint address="${sftp.address.base}/SDI0070/4120/out" connector="sftpConnector">
+					<filter pattern="*.*"
+						className="com.pdm.interfaces.RallyFilenameWildCardFilter" />
+					<properties>
+                		<property name="pollingFrequency" value="${frequency.polling.SDI0070.mog}"/>
+                	</properties>
+				</endpoint>
+			</inbound-router>
+			<outbound-router>
+				<router
+					className="com.pdm.interfaces.ListOfMapsMessageEnvelopeBasedMessageSplitter"
+					transformer="messageEnvelopeExtractorTransformer">
+					<endpoint address="jdbc://SDI0070_WEIGHT_SCALE_OUT"
+						connector="weightScaleMogConnector"
+						transformers="messageEnvelopeExtractorTransformer" />
+				</router>
+			</outbound-router>
+			<properties>
+				<property name="preOutboundRouterTransformers"
+					value="inputStreamToByteArrayTransformer fixedWidthBasedTextFileToListOfMapsTransformer SDI0070OgnlExpressionsTransformer" />
+				<container-property reference="weightScaleMogRallyService"
+					name="rallyService" />
+				<property name="controlRun" value="false" />
+				<property name="interfaceCode" value="SDI0070" />
+				<property name="targetSys" value="BALANCAMOG" />
+				<property name="countryCode" value="BR" />
+				<property name="companyCode" value="4101" />
+			</properties>
+		</mule-descriptor>
+		<mule-descriptor name="SDI0070_WEIGHT_SCALE_CAB"
+			implementation="com.pdm.interfaces.components.OutboundMessageEnvelopeBasedComponent">
+			<inbound-router>
+				<endpoint address="${sftp.address.base}/SDI0070/4130/out" connector="sftpConnector">
+					<filter pattern="*.*"
+						className="com.pdm.interfaces.RallyFilenameWildCardFilter" />
+					<properties>
+                		<property name="pollingFrequency" value="${frequency.polling.SDI0070.cab}"/>
+                	</properties>
+				</endpoint>
+			</inbound-router>
+			<outbound-router>
+				<router
+					className="com.pdm.interfaces.ListOfMapsMessageEnvelopeBasedMessageSplitter"
+					transformer="messageEnvelopeExtractorTransformer">
+					<endpoint address="jdbc://SDI0070_WEIGHT_SCALE_OUT"
+						connector="weightScaleCabConnector"
+						transformers="messageEnvelopeExtractorTransformer" />
+				</router>
+			</outbound-router>
+			<properties>
+				<property name="preOutboundRouterTransformers"
+					value="inputStreamToByteArrayTransformer fixedWidthBasedTextFileToListOfMapsTransformer SDI0070OgnlExpressionsTransformer" />
+				<container-property reference="weightScaleCabRallyService"
+					name="rallyService" />
+				<property name="controlRun" value="false" />
+				<property name="interfaceCode" value="SDI0070" />
+				<property name="targetSys" value="BALANCACAB" />
+				<property name="countryCode" value="BR" />
+				<property name="companyCode" value="4101" />
+			</properties>
+		</mule-descriptor>
+		<mule-descriptor name="SDI0070_WEIGHT_SCALE_BAL"
+			implementation="com.pdm.interfaces.components.OutboundMessageEnvelopeBasedComponent">
+			<inbound-router>
+				<endpoint address="${sftp.address.base}/SDI0070/4140/out" connector="sftpConnector">
+					<filter pattern="*.*"
+						className="com.pdm.interfaces.RallyFilenameWildCardFilter" />
+					<properties>
+                		<property name="pollingFrequency" value="${frequency.polling.SDI0070.bal}"/>
+                	</properties>
+				</endpoint>
+			</inbound-router>
+			<outbound-router>
+				<router
+					className="com.pdm.interfaces.ListOfMapsMessageEnvelopeBasedMessageSplitter"
+					transformer="messageEnvelopeExtractorTransformer">
+					<endpoint address="jdbc://SDI0070_WEIGHT_SCALE_OUT"
+						connector="weightScaleBalConnector"
+						transformers="messageEnvelopeExtractorTransformer" />
+				</router>
+			</outbound-router>
+			<properties>
+				<property name="preOutboundRouterTransformers"
+					value="inputStreamToByteArrayTransformer fixedWidthBasedTextFileToListOfMapsTransformer SDI0070OgnlExpressionsTransformer" />
+				<container-property reference="weightScaleBalRallyService"
+					name="rallyService" />
+				<property name="controlRun" value="false" />
+				<property name="interfaceCode" value="SDI0070" />
+				<property name="targetSys" value="BALANCABAL" />
+				<property name="countryCode" value="BR" />
+				<property name="companyCode" value="4101" />
+			</properties>
+		</mule-descriptor>
+		<mule-descriptor name="SDI0070_WEIGHT_SCALE_TRO"
+			implementation="com.pdm.interfaces.components.OutboundMessageEnvelopeBasedComponent">
+			<inbound-router>
+				<endpoint address="${sftp.address.base}/SDI0070/4180/out" connector="sftpConnector">
+					<filter pattern="*.*"
+						className="com.pdm.interfaces.RallyFilenameWildCardFilter" />
+					<properties>
+                		<property name="pollingFrequency" value="${frequency.polling.SDI0070.tro}"/>
+                	</properties>
+				</endpoint>
+			</inbound-router>
+			<outbound-router>
+				<router
+					className="com.pdm.interfaces.ListOfMapsMessageEnvelopeBasedMessageSplitter"
+					transformer="messageEnvelopeExtractorTransformer">
+					<endpoint address="jdbc://SDI0070_WEIGHT_SCALE_OUT"
+						connector="weightScaleTroConnector"
+						transformers="messageEnvelopeExtractorTransformer" />
+				</router>
+			</outbound-router>
+			<properties>
+				<property name="preOutboundRouterTransformers"
+					value="inputStreamToByteArrayTransformer fixedWidthBasedTextFileToListOfMapsTransformer SDI0070OgnlExpressionsTransformer" />
+				<container-property reference="weightScaleTroRallyService"
+					name="rallyService" />
+				<property name="controlRun" value="false" />
+				<property name="interfaceCode" value="SDI0070" />
+				<property name="targetSys" value="BALANCATRO" />
+				<property name="countryCode" value="BR" />
+				<property name="companyCode" value="4101" />
+			</properties>
+		</mule-descriptor>
+		<mule-descriptor name="SDI0070_WEIGHT_SCALE_CON"
+			implementation="com.pdm.interfaces.components.OutboundMessageEnvelopeBasedComponent">
+			<inbound-router>
+				<endpoint address="${sftp.address.base}/SDI0070/4160/out" connector="sftpConnector">
+					<filter pattern="*.*"
+						className="com.pdm.interfaces.RallyFilenameWildCardFilter" />
+					<properties>
+                		<property name="pollingFrequency" value="${frequency.polling.SDI0070.con}"/>
+                	</properties>
+				</endpoint>
+			</inbound-router>
+			<outbound-router>
+				<router
+					className="com.pdm.interfaces.ListOfMapsMessageEnvelopeBasedMessageSplitter"
+					transformer="messageEnvelopeExtractorTransformer">
+					<endpoint address="jdbc://SDI0070_WEIGHT_SCALE_OUT"
+						connector="weightScaleConConnector"
+						transformers="messageEnvelopeExtractorTransformer" />
+				</router>
+			</outbound-router>
+			<properties>
+				<property name="preOutboundRouterTransformers"
+					value="inputStreamToByteArrayTransformer fixedWidthBasedTextFileToListOfMapsTransformer SDI0070OgnlExpressionsTransformer" />
+				<container-property reference="weightScaleConRallyService"
+					name="rallyService" />
+				<property name="controlRun" value="false" />
+				<property name="interfaceCode" value="SDI0070" />
+				<property name="targetSys" value="BALANCACON" />
+				<property name="countryCode" value="BR" />
+				<property name="companyCode" value="4101" />
+			</properties>
+		</mule-descriptor>
+		<mule-descriptor name="SDI0080_WEIGHT_SCALE_MOG1"
+			implementation="com.pdm.interfaces.components.DBInputInboundMessageEnvelopeBasedComponent">
+			<inbound-router>
+				<endpoint
+					address="jdbc://SDI0080_WEIGHT_SCALE_MOG1_TRIGGER"
+					connector="weightScaleMogConnector">
+					<properties>
+						<property name="pollingFrequency" value="10100" />
+					</properties>
+				</endpoint>
+			</inbound-router>
+			<outbound-router>
+				<router
+					className="org.mule.routing.outbound.FilteringOutboundRouter">
+					<endpoint address="${sftp.address.base}/SDI0080/4120MOG1/in" connector="sftpConnector"
+						transformers="listOfMapsToFixedWidthBasedTextFileTransformerByColumnNames messageEnvelopeExtractorTransformer">
+						<properties>
+							<property name="outputPattern"
+								value="${TRIGGER_NUMEROVIAJE}.txt" />
+						</properties>
+					</endpoint>
+				</router>
+			</outbound-router>
+			<properties>
+				<property name="legacyQuery"
+					value="select numeroViaje, numeroPedido, numeroItem, codigoCliente, codigoLote, cantidad, unidadMedida, codigoTransportista, docChofer, nombreChofer, patente1, patente2, patente3 from sap_entrega where ACK!='S' and organizacion='4120' and puesto='MOG1' and numeroViaje=${TRIGGER_NUMEROVIAJE}" />
+				<property name="legacyQueryACK"
+					value="update sap_entrega set ACK='S' where organizacion='4120' and puesto='MOG1' and numeroViaje=${TRIGGER_NUMEROVIAJE}" />
+				<container-property reference="weightScaleMogRallyService"
+					name="rallyService" />
+				<property name="sourceSys" value="BALANCAMOG" />
+				<property name="interfaceCode" value="SDI0080" />
+				<property name="controlRun" value="false" />
+				<property name="countryCode" value="BR" />
+				<property name="companyCode" value="4101" />
+				<property name="preOutboundRouterTransformers"
+					value="SDI0080OgnlExpressionsTransformer" />
+			</properties>
+		</mule-descriptor>
+        <!-- TODO Balanza de Mogi -->
+        <mule-descriptor name="SDI0080_WEIGHT_SCALE_MOG2"
+			implementation="com.pdm.interfaces.components.DBInputInboundMessageEnvelopeBasedComponent">
+			<inbound-router>
+				<endpoint
+					address="jdbc://SDI0080_WEIGHT_SCALE_MOG2_TRIGGER"
+					connector="weightScaleMogConnector">
+					<properties>
+						<property name="pollingFrequency" value="10000" />
+					</properties>
+				</endpoint>
+			</inbound-router>
+			<outbound-router>
+				<router
+					className="org.mule.routing.outbound.FilteringOutboundRouter">
+					<endpoint address="${sftp.address.base}/SDI0080/4120MOG2/in" connector="sftpConnector"
+						transformers="listOfMapsToFixedWidthBasedTextFileTransformerByColumnNames messageEnvelopeExtractorTransformer">
+						<properties>
+							<property name="outputPattern"
+								value="${TRIGGER_NUMEROVIAJE}.txt" />
+						</properties>
+					</endpoint>
+				</router>
+			</outbound-router>
+			<properties>
+				<property name="legacyQuery"
+					value="select numeroViaje, numeroPedido, numeroItem, codigoCliente, codigoLote, cantidad, unidadMedida, codigoTransportista, docChofer, nombreChofer, patente1, patente2, patente3 from sap_entrega where ACK!='S' and organizacion='4120' and puesto='MOG2' and numeroViaje=${TRIGGER_NUMEROVIAJE}" />
+				<property name="legacyQueryACK"
+					value="update sap_entrega set ACK='S' where organizacion='4120' and puesto='MOG2' and numeroViaje=${TRIGGER_NUMEROVIAJE}" />
+				<container-property reference="weightScaleMogRallyService"
+					name="rallyService" />
+				<property name="sourceSys" value="BALANCAMOG" />
+				<property name="interfaceCode" value="SDI0080" />
+				<property name="controlRun" value="false" />
+				<property name="countryCode" value="BR" />
+				<property name="companyCode" value="4101" />
+				<property name="preOutboundRouterTransformers"
+					value="SDI0080OgnlExpressionsTransformer" />
+			</properties>
+		</mule-descriptor>
+<mule-descriptor name="SDI0080_WEIGHT_SCALE_MOG3"
+			implementation="com.pdm.interfaces.components.DBInputInboundMessageEnvelopeBasedComponent">
+			<inbound-router>
+				<endpoint
+					address="jdbc://SDI0080_WEIGHT_SCALE_MOG3_TRIGGER"
+					connector="weightScaleMogConnector">
+					<properties>
+						<property name="pollingFrequency" value="9500" />
+					</properties>
+				</endpoint>
+			</inbound-router>
+			<outbound-router>
+				<router
+					className="org.mule.routing.outbound.FilteringOutboundRouter">
+					<endpoint address="${sftp.address.base}/SDI0080/4120MOG3/in" connector="sftpConnector" 
+						transformers="listOfMapsToFixedWidthBasedTextFileTransformerByColumnNames messageEnvelopeExtractorTransformer">
+						<properties>
+							<property name="outputPattern"
+								value="${TRIGGER_NUMEROVIAJE}.txt" />
+						</properties>
+					</endpoint>
+				</router>
+			</outbound-router>
+			<properties>
+				<property name="legacyQuery"
+					value="select numeroViaje, numeroPedido, numeroItem, codigoCliente, codigoLote, cantidad, unidadMedida, codigoTransportista, docChofer, nombreChofer, patente1, patente2, patente3 from sap_entrega where ACK!='S' and organizacion='4120' and puesto='MOG3' and numeroViaje=${TRIGGER_NUMEROVIAJE}" />
+				<property name="legacyQueryACK"
+					value="update sap_entrega set ACK='S' where organizacion='4120' and puesto='MOG3' and numeroViaje=${TRIGGER_NUMEROVIAJE}" />
+				<container-property reference="weightScaleMogRallyService"
+					name="rallyService" />
+				<property name="sourceSys" value="BALANCAMOG" />
+				<property name="interfaceCode" value="SDI0080" />
+				<property name="controlRun" value="false" />
+				<property name="countryCode" value="BR" />
+				<property name="companyCode" value="4101" />
+				<property name="preOutboundRouterTransformers"
+					value="SDI0080OgnlExpressionsTransformer" />
+			</properties>
+		</mule-descriptor>
+        <mule-descriptor name="SDI0080_WEIGHT_SCALE_CAB1"
+			implementation="com.pdm.interfaces.components.DBInputInboundMessageEnvelopeBasedComponent">
+			<inbound-router>
+				<endpoint
+					address="jdbc://SDI0080_WEIGHT_SCALE_CAB1_TRIGGER"
+					connector="weightScaleCabConnector">
+					<properties>
+						<property name="pollingFrequency" value="11000" />
+					</properties>
+				</endpoint>
+			</inbound-router>
+			<outbound-router>
+				<router
+					className="org.mule.routing.outbound.FilteringOutboundRouter">
+					<endpoint address="${sftp.address.base}/SDI0080/4130CAB1/in"
+						transformers="listOfMapsToFixedWidthBasedTextFileTransformerByColumnNames messageEnvelopeExtractorTransformer">
+						<properties>
+							<property name="outputPattern"
+								value="${TRIGGER_NUMEROVIAJE}.txt" />
+						</properties>
+					</endpoint>
+				</router>
+			</outbound-router>
+			<properties>
+				<property name="legacyQuery"
+					value="select numeroViaje, numeroPedido, numeroItem, codigoCliente, codigoLote, cantidad, unidadMedida, codigoTransportista, docChofer, nombreChofer, patente1, patente2, patente3 from sap_entrega where ACK!='S' and organizacion='4130' and puesto='CAB1' and numeroViaje=${TRIGGER_NUMEROVIAJE}" />
+				<property name="legacyQueryACK"
+					value="update sap_entrega set ACK='S' where organizacion='4130' and puesto='CAB1' and numeroViaje=${TRIGGER_NUMEROVIAJE}" />
+				<container-property reference="weightScaleCabRallyService"
+					name="rallyService" />
+				<property name="sourceSys" value="BALANCACAB" />
+				<property name="interfaceCode" value="SDI0080" />
+				<property name="controlRun" value="false" />
+				<property name="countryCode" value="BR" />
+				<property name="companyCode" value="4101" />
+				<property name="preOutboundRouterTransformers"
+					value="SDI0080OgnlExpressionsTransformer" />
+			</properties>
+		</mule-descriptor>
+        <!-- TODO Balanza de Cabo -->
+        <mule-descriptor name="SDI0080_WEIGHT_SCALE_CAB2"
+			implementation="com.pdm.interfaces.components.DBInputInboundMessageEnvelopeBasedComponent">
+			<inbound-router>
+				<endpoint
+					address="jdbc://SDI0080_WEIGHT_SCALE_CAB2_TRIGGER"
+					connector="weightScaleCabConnector">
+					<properties>
+						<property name="pollingFrequency" value="11100" />
+					</properties>
+				</endpoint>
+			</inbound-router>
+			<outbound-router>
+				<router
+					className="org.mule.routing.outbound.FilteringOutboundRouter">
+					<endpoint address="${sftp.address.base}/SDI0080/4130CAB2/in"
+						transformers="listOfMapsToFixedWidthBasedTextFileTransformerByColumnNames messageEnvelopeExtractorTransformer">
+						<properties>
+							<property name="outputPattern"
+								value="${TRIGGER_NUMEROVIAJE}.txt" />
+						</properties>
+					</endpoint>
+				</router>
+			</outbound-router>
+			<properties>
+				<property name="legacyQuery"
+					value="select numeroViaje, numeroPedido, numeroItem, codigoCliente, codigoLote, cantidad, unidadMedida, codigoTransportista, docChofer, nombreChofer, patente1, patente2, patente3 from sap_entrega where ACK!='S' and organizacion='4130' and puesto='CAB2' and numeroViaje=${TRIGGER_NUMEROVIAJE}" />
+				<property name="legacyQueryACK"
+					value="update sap_entrega set ACK='S' where organizacion='4130' and puesto='CAB2' and numeroViaje=${TRIGGER_NUMEROVIAJE}" />
+				<container-property reference="weightScaleCabRallyService"
+					name="rallyService" />
+				<property name="sourceSys" value="BALANCACAB" />
+				<property name="interfaceCode" value="SDI0080" />
+				<property name="controlRun" value="false" />
+				<property name="countryCode" value="BR" />
+				<property name="companyCode" value="4101" />
+				<property name="preOutboundRouterTransformers"
+					value="SDI0080OgnlExpressionsTransformer" />
+			</properties>
+		</mule-descriptor>
+        <mule-descriptor name="SDI0080_WEIGHT_SCALE_BAL1"
+			implementation="com.pdm.interfaces.components.DBInputInboundMessageEnvelopeBasedComponent">
+			<inbound-router>
+				<endpoint
+					address="jdbc://SDI0080_WEIGHT_SCALE_BAL1_TRIGGER"
+					connector="weightScaleBalConnector">
+					<properties>
+						<property name="pollingFrequency" value="11000" />
+					</properties>
+				</endpoint>
+			</inbound-router>
+			<outbound-router>
+				<router
+					className="org.mule.routing.outbound.FilteringOutboundRouter">
+					<endpoint address="${sftp.address.base}/SDI0080/4140BAL1/in"
+						transformers="listOfMapsToFixedWidthBasedTextFileTransformerByColumnNames messageEnvelopeExtractorTransformer">
+						<properties>
+							<property name="outputPattern"
+								value="${TRIGGER_NUMEROVIAJE}.txt" />
+						</properties>
+					</endpoint>
+				</router>
+			</outbound-router>
+			<properties>
+				<property name="legacyQuery"
+					value="select numeroViaje, numeroPedido, numeroItem, codigoCliente, codigoLote, cantidad, unidadMedida, codigoTransportista, docChofer, nombreChofer, patente1, patente2, patente3 from sap_entrega where ACK!='S' and organizacion='4140' and puesto='BAL1' and numeroViaje=${TRIGGER_NUMEROVIAJE}" />
+				<property name="legacyQueryACK"
+					value="update sap_entrega set ACK='S' where organizacion='4140' and puesto='BAL1' and numeroViaje=${TRIGGER_NUMEROVIAJE}" />
+				<container-property reference="weightScaleBalRallyService"
+					name="rallyService" />
+				<property name="sourceSys" value="BALANCABAL" />
+				<property name="interfaceCode" value="SDI0080" />
+				<property name="controlRun" value="false" />
+				<property name="countryCode" value="BR" />
+				<property name="companyCode" value="4101" />
+				<property name="preOutboundRouterTransformers"
+					value="SDI0080OgnlExpressionsTransformer" />
+			</properties>
+		</mule-descriptor>
+        <mule-descriptor name="SDI0080_WEIGHT_SCALE_TRO1"
+			implementation="com.pdm.interfaces.components.DBInputInboundMessageEnvelopeBasedComponent">
+			<inbound-router>
+				<endpoint
+					address="jdbc://SDI0080_WEIGHT_SCALE_TRO1_TRIGGER"
+					connector="weightScaleTroConnector">
+					<properties>
+						<property name="pollingFrequency" value="11000" />
+					</properties>
+				</endpoint>
+			</inbound-router>
+			<outbound-router>
+				<router
+					className="org.mule.routing.outbound.FilteringOutboundRouter">
+					<endpoint address="${sftp.address.base}/SDI0080/4180TRO1/in"
+						transformers="listOfMapsToFixedWidthBasedTextFileTransformerByColumnNames messageEnvelopeExtractorTransformer">
+						<properties>
+							<property name="outputPattern"
+								value="${TRIGGER_NUMEROVIAJE}.txt" />
+						</properties>
+					</endpoint>
+				</router>
+			</outbound-router>
+			<properties>
+				<property name="legacyQuery"
+					value="select numeroViaje, numeroPedido, numeroItem, codigoCliente, codigoLote, cantidad, unidadMedida, codigoTransportista, docChofer, nombreChofer, patente1, patente2, patente3 from sap_entrega where ACK!='S' and organizacion='4180' and puesto='TRO1' and numeroViaje=${TRIGGER_NUMEROVIAJE}" />
+				<property name="legacyQueryACK"
+					value="update sap_entrega set ACK='S' where organizacion='4180' and puesto='TRO1' and numeroViaje=${TRIGGER_NUMEROVIAJE}" />
+				<container-property reference="weightScaleTroRallyService"
+					name="rallyService" />
+				<property name="sourceSys" value="BALANCATRO" />
+				<property name="interfaceCode" value="SDI0080" />
+				<property name="controlRun" value="false" />
+				<property name="countryCode" value="BR" />
+				<property name="companyCode" value="4101" />
+				<property name="preOutboundRouterTransformers"
+					value="SDI0080OgnlExpressionsTransformer" />
+			</properties>
+		</mule-descriptor>
+        <mule-descriptor name="SDI0080_WEIGHT_SCALE_CON1"
+			implementation="com.pdm.interfaces.components.DBInputInboundMessageEnvelopeBasedComponent">
+			<inbound-router>
+				<endpoint
+					address="jdbc://SDI0080_WEIGHT_SCALE_CON1_TRIGGER"
+					connector="weightScaleConConnector">
+					<properties>
+						<property name="pollingFrequency" value="12000" />
+					</properties>
+				</endpoint>
+			</inbound-router>
+			<outbound-router>
+				<router
+					className="org.mule.routing.outbound.FilteringOutboundRouter">
+					<endpoint address="${sftp.address.base}/SDI0080/4160CON1/in"
+						transformers="listOfMapsToFixedWidthBasedTextFileTransformerByColumnNames messageEnvelopeExtractorTransformer">
+						<properties>
+							<property name="outputPattern"
+								value="${TRIGGER_NUMEROVIAJE}.txt" />
+						</properties>
+					</endpoint>
+				</router>
+			</outbound-router>
+			<properties>
+				<property name="legacyQuery"
+					value="select numeroViaje, numeroPedido, numeroItem, codigoCliente, codigoLote, cantidad, unidadMedida, codigoTransportista, docChofer, nombreChofer, patente1, patente2, patente3 from sap_entrega where ACK!='S' and organizacion='4160' and puesto='CON1' and numeroViaje=${TRIGGER_NUMEROVIAJE}" />
+				<property name="legacyQueryACK"
+					value="update sap_entrega set ACK='S' where organizacion='4160' and puesto='CON1' and numeroViaje=${TRIGGER_NUMEROVIAJE}" />
+				<container-property reference="weightScaleConRallyService"
+					name="rallyService" />
+				<property name="sourceSys" value="BALANCACON" />
+				<property name="interfaceCode" value="SDI0080" />
+				<property name="controlRun" value="false" />
+				<property name="countryCode" value="BR" />
+				<property name="companyCode" value="4101" />
+				<property name="preOutboundRouterTransformers"
+					value="SDI0080OgnlExpressionsTransformer" />
+			</properties>
+		</mule-descriptor>
+	</model>
+</mule-configuration>

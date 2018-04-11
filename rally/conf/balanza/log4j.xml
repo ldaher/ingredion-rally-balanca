@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE log4j:configuration SYSTEM "log4j.dtd">
+<log4j:configuration xmlns:log4j="http://jakarta.apache.org/log4j/" debug="false">
+
+    <appender name="CONSOLE" class="org.apache.log4j.ConsoleAppender">
+        <param name="Target" value="System.out"/>
+        <param name="Threshold" value="INFO"/>
+        <layout class="org.apache.log4j.PatternLayout">
+            <param name="ConversionPattern" value="%-5p %d [%t] %c: %m%n"/>
+        </layout>
+    </appender>
+
+    <appender name="MULE_FILE" class="org.apache.log4j.RollingFileAppender">
+        <param name="File" value="logs/rallyBalanza.log"/>
+        <param name="Append" value="true"/>
+        <param name="MaxFileSize" value="10240KB"/>
+        <param name="MaxBackupIndex" value="25"/>
+        <layout class="org.apache.log4j.PatternLayout">
+            <param name="ConversionPattern" value="%-5p %d [%t] %c: %m%n"/>
+        </layout>
+    </appender>
+
+    <appender name="DB_FILE" class="org.apache.log4j.FileAppender">
+        <param name="File" value="logs/rallyBalanzaDB.log"/>
+        <param name="Append" value="true"/>
+        <layout class="org.apache.log4j.PatternLayout">
+            <param name="ConversionPattern" value="%-5p %d [%t] %c: %m%n"/>
+        </layout>
+    </appender>
+
+    <logger name="org.apache">
+        <level value="WARN"/>
+        <appender-ref ref="MULE_FILE"/>
+    </logger>
+
+    <logger name="com.mchange">
+        <level value="WARN"/>
+        <appender-ref ref="MULE_FILE"/>
+    </logger>
+
+    <logger name="org.springframework">
+        <level value="WARN"/>
+        <appender-ref ref="MULE_FILE"/>
+    </logger>
+
+    <logger name="org.mule">
+        <level value="INFO"/>
+        <appender-ref ref="MULE_FILE"/>
+    </logger>
+
+    <logger name="org.mule.providers.jdbc">
+        <level value="ERROR"/>
+        <appender-ref ref="MULE_FILE"/>
+    </logger>
+
+    <logger name="org.hibernate">
+        <level value="INFO"/>
+        <appender-ref ref="MULE_FILE"/>
+    </logger>
+
+    <logger name="com.pdm">
+        <level value="DEBUG"/>
+        <appender-ref ref="MULE_FILE"/>
+    </logger>
+
+    <logger name="org.mule.util.TemplateParser">
+        <level value="ERROR"/>
+        <appender-ref ref="MULE_FILE"/>
+    </logger>
+
+    <logger name="org.mule.config.i18n.MessageFactory">
+        <level value="ERROR"/>
+        <appender-ref ref="MULE_FILE"/>
+    </logger>
+
+    <logger name="org.mule.impl.container.MultiContainerContext">
+        <level value="ERROR"/>
+        <appender-ref ref="MULE_FILE"/>
+    </logger>
+
+    <root>
+        <level value="INFO"/>
+        <appender-ref ref="MULE_FILE"/>
+        <appender-ref ref="CONSOLE"/>
+    </root>
+
+</log4j:configuration>

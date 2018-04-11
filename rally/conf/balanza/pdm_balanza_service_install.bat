@@ -1,0 +1,2 @@
+@echo off
+RallyBalanzaService -install RALLY_BALANZA "%MULE_JAVA_HOME%\jre1.5.0_20\bin\client\jvm.dll" -XX:+UseParallelGC -Duser.language=es -Duser.country=ES -Dcom.sun.management.jmxremote -Xdebug -Xnoagent -Djava.compiler=NONE -Xrunjdwp:transport=dt_socket,server=y,suspend=n,address=5006 -Xmx1024m -Djava.class.path="%RALLY_HOME%\conf\balanza\lib\rally.jar;%RALLY_HOME%\lib\opt.jar;%RALLY_HOME%\lib\mule.jar;" -start org.mule.MuleServer -params -config .\pdm-config.xml -current %RALLY_HOME%\conf\balanza -depends "MySQL51" -auto

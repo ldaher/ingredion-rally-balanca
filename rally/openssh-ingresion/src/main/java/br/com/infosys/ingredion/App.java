@@ -41,18 +41,23 @@ public class App {
 		session = null;
 
 		try {
+			System.out.printf("Criando Sessão com o usuário %s e host %s\n", user, host);
 			session = jsch.getSession(user, host);
 			Properties hash = new Properties();
 			hash.put("StrictHostKeyChecking", "no");
+			System.out.printf("Configurando a Sessão com o valor de propriedade %s igual à %s\n", "StrictHostKeyChecking", hash.getProperty("StrictHostKeyChecking"));
 			session.setConfig(hash);
+			System.out.printf("Informando a porta %s e a senha %s para Sessão\n", port, password);
 			session.setPort(Integer.parseInt(port));
 			session.setPassword(password);
+			System.out.printf("Conectando a Sessão...\n", port, password);
 			session.connect();
 			String fingerPrint = null;
 			if ((fingerPrint != null) && (!session.getHostKey().getFingerPrint(jsch).equals(fingerPrint))) {
 				throw new RuntimeException("Invalid Fingerprint");
 			}
 			Channel channel = session.openChannel("sftp");
+			System.out.printf("Conectando a Canal sFTP...\n", port, password);
 			channel.connect();
 			c = ((ChannelSftp) channel);
 			home = c.pwd();
@@ -69,6 +74,7 @@ public class App {
 	}
 
 	private static boolean changeWorkingDirectory(String wd) {
+		System.out.printf("Acessando o sistema de arquivo...\n");
 		try {
 			if (!wd.startsWith(home)) {
 				wd = home + wd;
@@ -76,6 +82,7 @@ public class App {
 			if (wd.startsWith("/~")) {
 				wd = home + wd.substring(2, wd.length());
 			}
+			System.out.printf("Acessando o diretório especificado...\n");
 			c.cd(wd);
 		} catch (SftpException e) {
 			if ((c != null) && (c.isConnected())) {
